@@ -6,11 +6,16 @@
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_glfw_gl3.cpp" />
-    <ClCompile Include="src\FirstShader_GUI.cpp" />
+    <ClCompile Include="src\bubble.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\object\firstFragShader.fs" />
     <None Include="src\object\firstVertexShader.vs" />
+    <None Include="src\shaders\fresnel.frag" />
+    <None Include="src\shaders\reflect.frag" />
+    <None Include="src\shaders\reflect.vert" />
+    <None Include="src\shaders\skybox.frag" />
+    <None Include="src\shaders\skybox.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />

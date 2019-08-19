@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\FirstShader_GUI.cpp" />
+    <ClCompile Include="src\bubble.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
@@ -29,6 +29,11 @@
   <ItemGroup>
     <None Include="src\object\firstFragShader.fs" />
     <None Include="src\object\firstVertexShader.vs" />
+    <None Include="src\shaders\fresnel.frag" />
+    <None Include="src\shaders\reflect.frag" />
+    <None Include="src\shaders\reflect.vert" />
+    <None Include="src\shaders\skybox.frag" />
+    <None Include="src\shaders\skybox.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />
@@ -105,8 +110,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies);glfw3.lib;opengl32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\lib-vc2019</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc140-mt.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\lib_assimp;$(SolutionDir)Dependencies\lib-vc2019</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -135,8 +140,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>%(AdditionalDependencies);glfw3.lib;opengl32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\lib-vc2019</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc140-mt.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependencies\lib_assimp;$(SolutionDir)Dependencies\lib-vc2019</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

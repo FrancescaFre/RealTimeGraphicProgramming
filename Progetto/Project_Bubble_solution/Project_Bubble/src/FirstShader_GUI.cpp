@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <assimp/camera.h>
 #include <utils/shader_v1.h>
 
 #include <iostream>

@@ -1,7 +1,15 @@
-﻿  FirstShader_GUI.cpp
+﻿  bubble.cpp
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(98,26): warning C4305:  'initializing': truncation from 'double' to 'GLfloat'
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(194,24): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(483,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(484,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(489,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(490,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(493,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(494,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
   Generating code
-  1141 of 1202 functions (94.9%) were compiled, the rest were copied from previous compilation.
-    260 functions were new in current compilation
-    11 functions had inline decision re-evaluated but remain unchanged
+  0 of 1605 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Project_Bubble.vcxproj -> D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Release\Project_Bubble.exe
