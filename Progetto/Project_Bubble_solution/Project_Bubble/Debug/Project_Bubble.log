@@ -1,1 +1,10 @@
-﻿  Project_Bubble.vcxproj -> D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.exe
+﻿  bubble.cpp
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(95,26): warning C4305:  'initializing': truncation from 'double' to 'GLfloat'
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(191,24): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(578,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(579,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(584,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(585,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(588,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(589,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+  Project_Bubble.vcxproj -> D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.exe

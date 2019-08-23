@@ -48,7 +48,6 @@ void SetupShaders();
 void DeleteShaders();
 // print on console the name of current shader
 void PrintCurrentShader(int shader);
-
 // load the 6 images from disk and create an OpenGL cubemap
 GLint LoadTextureCube(string path);
 
@@ -69,30 +68,28 @@ GLfloat orientationY = 0.0f;
 // rotation speed on Y axis
 GLfloat spin_speed = 30.0f;
 // boolean to start/stop animated rotation on Y angle
-GLboolean spinning = GL_TRUE;
+bool spinning = false;
 
 // boolean to activate/deactivate wireframe rendering
-GLboolean wireframe = GL_FALSE;
-// enum data structure to manage indices for shaders swapping
-enum available_ShaderPrograms { REFLECTION, FRESNEL };
-// strings with shaders names to print the name of the current one on console
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL" };
+bool wireframe = false;
 
+// enum data structure to manage indices for shaders swapping
+enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE };
+// strings with shaders names to print the name of the current one on console
+const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE" };
 // index of the current shader (= 0 in the beginning)
 GLuint current_program = REFLECTION;
 // a vector for all the Shader Programs used and swapped in the application
 vector<Shader> shaders;
+
+// vector for models
+enum available_models {BUNNY, SPHERE, CUBE};
+int current_model = 1;
+
 // we create a camera. We pass the initial position as a paramenter to the constructor. The last boolean tells that we want a camera "anchored" to the ground
-Camera camera(glm::vec3(0.0f, 0.0f, 7.0f), GL_TRUE);
+Camera camera(glm::vec3(0.0f, 0.0f, 7.0f), GL_FALSE);
 
 glm::vec3 lightPos0 = glm::vec3(0.0f, 0.0f, 10.0f);
-
-// weight for the diffusive component
-GLfloat Kd = 0.8f;
-// roughness index for Cook-Torrance shader
-GLfloat alpha = 0.2f;
-// Fresnel reflectance at 0 degree (Schlik's approximation)
-GLfloat F0 = 0.9f;
 
 // ratio between refraction indices (Fresnel shader)
 GLfloat Eta = 1.00 / 1.52;
@@ -160,7 +157,7 @@ int main() {
 	Shader skybox_shader("src/shaders/skybox.vert", "src/shaders/skybox.frag");
 
 	// we load the cube map (we pass the path to the folder containing the 6 views)
-	textureCube = LoadTextureCube("src/texture/skybox/");
+	textureCube = LoadTextureCube("src/texture/cube/colored/");
 
 	// we load the model(s) (code of Model class is in include/utils/model_v2.h)
 	Model cubeModel("src/models/cube.obj");
@@ -184,7 +181,7 @@ int main() {
 
 	// Setup style
 	ImGui::StyleColorsDark();
-	
+
 //-------------------------------------------
 //				Rendering LOOP 				|========================================================
 //-------------------------------------------
@@ -227,6 +224,10 @@ int main() {
 		GLint textureLocation = glGetUniformLocation(shaders[current_program].Program, "tCube");
 		// the shaders for reflection and refraction need the camera position in world coordinates
 		GLint cameraLocation = glGetUniformLocation(shaders[current_program].Program, "cameraPosition");
+	
+		// we assign the value to the uniform variable
+		glUniform1i(textureLocation, 0);
+		glUniform3fv(cameraLocation, 1, glm::value_ptr(camera.Position));
 
 		if (current_program == FRESNEL)
 		{
@@ -240,25 +241,57 @@ int main() {
 			glUniform1f(powerLocation, mFresnelPower);
 			glUniform3fv(pointLightLocation, 1, glm::value_ptr(lightPos0));
 		}
-
 		//si cercano i puntatori delle uniform della projectione e della view, poi ci si assegnano i valori
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
 
-		//==============BUNNY
-		glm::mat4 bunnyModelMatrix;
-		glm::mat3 bunnyNormalMatrix;
-		//bunnyModelMatrix = glm::translate(bunnyModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
-		bunnyModelMatrix = glm::rotate(bunnyModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-		bunnyModelMatrix = glm::scale(bunnyModelMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
-		bunnyNormalMatrix = glm::inverseTranspose(glm::mat3(view * bunnyModelMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyModelMatrix));
-		glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyNormalMatrix));
+		//==============BUNNY		
+		if (current_model == 0) 
+		{
+			glm::mat4 bunnyModelMatrix;
+			glm::mat3 bunnyNormalMatrix;
+			//bunnyModelMatrix = glm::translate(bunnyModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
+			bunnyModelMatrix = glm::rotate(bunnyModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+			bunnyModelMatrix = glm::scale(bunnyModelMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
+			bunnyNormalMatrix = glm::inverseTranspose(glm::mat3(view * bunnyModelMatrix));
+			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyModelMatrix));
+			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyNormalMatrix));
 
-		// render del modello
-		bunnyModel.Draw(shaders[current_program]);
-		//-------------Fine BUNNY
+			// render del modello
+			bunnyModel.Draw(shaders[current_program]);
+		}//-------------Fine BUNNY
 
+		//==============CUBE
+		if (current_model == 2) 
+		{
+			glm::mat4 cubeModelMatrix;
+			glm::mat3 cubeNormalMatrix;
+			//cubeModelMatrix = glm::translate(cubeModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
+			cubeModelMatrix = glm::rotate(cubeModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+			cubeModelMatrix = glm::scale(cubeModelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+			cubeNormalMatrix = glm::inverseTranspose(glm::mat3(view * cubeModelMatrix));
+			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(cubeModelMatrix));
+			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(cubeNormalMatrix));
+
+			// we render the cube
+			cubeModel.Draw(shaders[current_program]);
+		}//---------------- fine CUBE
+
+		//================SPHERE
+		if (current_model == 1) 
+		{
+			glm::mat4 sphereModelMatrix;
+			glm::mat3 sphereNormalMatrix;
+			//sphereModelMatrix = glm::translate(sphereModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
+			sphereModelMatrix = glm::rotate(sphereModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+			sphereModelMatrix = glm::scale(sphereModelMatrix, glm::vec3(0.8f, 0.8f, 0.8f));
+			sphereNormalMatrix = glm::inverseTranspose(glm::mat3(view * sphereModelMatrix));
+			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(sphereModelMatrix));
+			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(sphereNormalMatrix));
+
+			// we render the sphere
+			sphereModel.Draw(shaders[current_program]);
+		}//----------------fine SPHERE
 
 		//==============SKYBOX
 		glDepthFunc(GL_LEQUAL);
@@ -284,30 +317,88 @@ int main() {
 		glDepthFunc(GL_LESS);
 		//-------------Fine SKYBOX
 		
+
+//-------------------------------------------
+//				BORDELLO CON LA GUI			|========================================================
+//-------------------------------------------
 		// imgui render
 	    // imgui new frame
-	/*	ImGui_ImplGlfwGL3_NewFrame();
+		ImGui_ImplGlfwGL3_NewFrame();
 		{
-			static float f = 0.0f;
-			static int counter = 0;
-			ImGui::Text("Hello, world!");                           // Display some text (you can use a format string too)
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+			if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+				current_program = 0;
+			ImGui::SameLine();
+			if (ImGui::Button("Fresnel")) 
+				current_program = 1;
+			ImGui::SameLine();
+			if (ImGui::Button("Bubble"))
+				current_program = 2;
+
+			if (current_program == 0) 
+				ImGui::Text("Reflect");
+
+			if (current_program == 1) {
+				ImGui::Text("Fresnel");                           // Display some text (you can use a format string too)
+				ImGui::SliderFloat("Eta", &Eta, -10.0f, 10.0f);  // Edit 1 float using a slider from 0.0f to 1.0f   
+				ImGui::SliderFloat("FresnelPower", &mFresnelPower, -10.0f, 10.0f);
+			}
+
+			ImGui::Text("");
+			ImGui::Text("Background Texture");
+			if (ImGui::Button("Park"))
+				textureCube = LoadTextureCube("src/texture/cube/park/");
+			ImGui::SameLine();
+			if (ImGui::Button("Mountain"))
+				textureCube = LoadTextureCube("src/texture/cube/mountain/");
+			ImGui::SameLine();
+			if (ImGui::Button("Uffizi"))
+				textureCube = LoadTextureCube("src/texture/cube/uffizi/");
+			ImGui::SameLine();
+			if (ImGui::Button("Sky"))
+				textureCube = LoadTextureCube("src/texture/cube/skybox/"); 
+			ImGui::SameLine();
+			if (ImGui::Button("Colored"))
+				textureCube = LoadTextureCube("src/texture/cube/colored/");
+
+			ImGui::Text(" ");
+			ImGui::Text("Model");
+			if (ImGui::Button("Bunny"))
+				current_model = 0;
+			ImGui::SameLine();
+			if (ImGui::Button("Sphere"))
+				current_model = 1;
+			ImGui::SameLine();
+			if (ImGui::Button("Cube"))
+				current_model = 2;
+
+			ImGui::Text(" ");
+			ImGui::Checkbox("Spinning", &spinning);
+			ImGui::Checkbox("Wireframe", &wireframe);
+
+			ImGui::Text(" ");
+			if (ImGui::Button("Print values"))
+			{
+				std::cout << "-------------" << endl;
+
+				PrintCurrentShader(current_program); 
+				std::cout << "Eta value " << Eta << endl;
+				std::cout << "FresnelPower value " << mFresnelPower << endl;
+			
+			}
+			ImGui::Text(" ");
 			ImGui::ColorEdit3("clear color", (float*)& clear_color); // Edit 3 floats representing a color
 
 			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
 			ImGui::Checkbox("Another Window", &show_another_window);
 
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
+			//ImGui::Text("counter = %d", counter);
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			
 		}
 		ImGui::Render();
 		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-		*/
+		
 		//swap dei buffer
 		glfwSwapBuffers(window);
 	}
@@ -395,16 +486,18 @@ GLint LoadTextureCube(string path)
 	return textureImage;
 }
 
-
 //////////////////////////////////////////
 // we create and compile shaders (code of Shader class is in include/utils/shader_v1.h), and we add them to the list of available shaders
 void SetupShaders()
 {
+
 	// we create the Shader Programs (code in shader_v1.h)
 	Shader shader1("src/shaders/reflect.vert", "src/shaders/reflect.frag");
 	shaders.push_back(shader1);
 	Shader shader2("src/shaders/reflect.vert", "src/shaders/fresnel.frag");
 	shaders.push_back(shader2);
+	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
+	shaders.push_back(shader3);
 	
 }
 
@@ -420,7 +513,7 @@ void DeleteShaders()
 // we print on console the name of the currently used shader
 void PrintCurrentShader(int shader)
 {
-	std::cout << "Current shader:" << print_available_ShaderPrograms[shader] << std::endl;
+	std::cout << "Current shader: " << print_available_ShaderPrograms[shader] << std::endl;
 }
 
 //////////////////////////////////////////
@@ -463,11 +556,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // If one of the WASD keys is pressed, the camera is moved accordingly (the code is in utils/camera.h)
 void apply_camera_movements()
 {
-	
-	if (keys[GLFW_KEY_W]) {
+	if (keys[GLFW_KEY_W])
 		camera.ProcessKeyboard(FORWARD, deltaTime);
-		std::cout << "wasd camera" << endl;
-	}
 	if (keys[GLFW_KEY_S])
 		camera.ProcessKeyboard(BACKWARD, deltaTime);
 	if (keys[GLFW_KEY_A])
@@ -477,7 +567,6 @@ void apply_camera_movements()
 }
 
 //////////////////////////////////////////
-
   // callback for mouse events
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
@@ -500,6 +589,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	lastY = ypos;
 
 	// we pass the offset to the Camera class instance in order to update the rendering
-	camera.ProcessMouseMovement(xoffset, yoffset);
+	//camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
