@@ -30,13 +30,10 @@
     <None Include="src\object\firstFragShader.fs" />
     <None Include="src\object\firstVertexShader.vs" />
     <None Include="src\shaders\fresnel.frag" />
-    <None Include="src\shaders\PhysicalBubble.frag" />
     <None Include="src\shaders\reflect.frag" />
     <None Include="src\shaders\reflect.vert" />
-    <None Include="src\shaders\SimpleSoapBubble.frag" />
     <None Include="src\shaders\skybox.frag" />
     <None Include="src\shaders\skybox.vert" />
-    <None Include="src\shaders\Thin_Film.frag" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />

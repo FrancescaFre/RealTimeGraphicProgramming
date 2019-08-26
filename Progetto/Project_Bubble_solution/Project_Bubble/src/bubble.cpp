@@ -33,74 +33,92 @@
 //-------------------------------------------
 //			Variable/Callback setup			|========================================================
 //-------------------------------------------
+
+
+#define ASSERT(x) if(!(x))  debugbreak();
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT (GLLogCall(#x,__FILE,LINE))
+
+void GLClearError() {
+	while (glGetError() != GL_NO_ERROR);
+}
+
+bool GLLogCall(const char* function, const char* file, int line) {
+	while (GLenum error = glGetError()) {
+		std::cerr << "[OpenGL ERROR] (" << error << " ):" << function << " " << file << " " << line << std::endl;
+		return false;
+	}
+	return true;
+}
+
 // dimensions of application's window
 GLuint screenWidth = 800, screenHeight = 600;
 
 // callback functions for keyboard and mouse events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-// if one of the WASD keys is pressed, we call the corresponding method of the Camera class
-void apply_camera_movements();
 
-// setup of Shader Programs for the shaders used in the application
+//Functions
+void apply_camera_movements();
 void SetupShaders();
-// delete Shader Programs whan application ends
 void DeleteShaders();
-// print on console the name of current shader
 void PrintCurrentShader(int shader);
-// load the 6 images from disk and create an OpenGL cubemap
 GLint LoadTextureCube(string path);
 
-// we initialize an array of booleans for each keybord key
+// keyboard keys
 bool keys[1024];
 
-// we set the initial position of mouse cursor in the application window
+//Mouse
 GLfloat lastX = 400, lastY = 300;
-// when rendering the first frame, we do not have a "previous state" for the mouse, so we need to manage this situation
 bool firstMouse = true;
 
 // parameters for time calculation (for animations)
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-// rotation angle on Y axis
+//Spinning values
 GLfloat orientationY = 0.0f;
-// rotation speed on Y axis
 GLfloat spin_speed = 30.0f;
-// boolean to start/stop animated rotation on Y angle
-bool spinning = false;
 
-// boolean to activate/deactivate wireframe rendering
-bool wireframe = false;
-
-// enum data structure to manage indices for shaders swapping
-enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE };
-// strings with shaders names to print the name of the current one on console
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE" };
-// index of the current shader (= 0 in the beginning)
-GLuint current_program = REFLECTION;
-// a vector for all the Shader Programs used and swapped in the application
-vector<Shader> shaders;
-
-// vector for models
-enum available_models {BUNNY, SPHERE, CUBE};
-int current_model = 1;
-
-// we create a camera. We pass the initial position as a paramenter to the constructor. The last boolean tells that we want a camera "anchored" to the ground
+bool spinning, wireframe; 
+//Camera end light
 Camera camera(glm::vec3(0.0f, 0.0f, 7.0f), GL_FALSE);
 
 glm::vec3 lightPos0 = glm::vec3(0.0f, 0.0f, 10.0f);
 
-// ratio between refraction indices (Fresnel shader)
+//FRESNEL
 GLfloat Eta = 1.00 / 1.52;
-// exponent for Fresnel equation
-// = 5 -> "physically correct" value
-// < 5 -> technically not physically correct,
-// but it gives more "artistic" results
 GLfloat mFresnelPower = 5;
 
-// texture unit for the cube map
+// CUBE MAP Texture
 GLuint textureCube;
+
+// SHADERS
+enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE };
+const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE" };
+GLuint current_program = REFLECTION;
+vector<Shader> shaders;
+
+//MODELS
+enum available_models { CUBE, SPHERE, BUNNY };
+const char* print_available_Models[] = { "CUBE", "SPHERE", "BUNNY" };
+
+
+
+struct object_on_scene {
+	available_models shape = CUBE; 
+	glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f); 
+	bool isMoving = false; 
+	glm::vec3 movement = glm::vec3(0.1f, 1.0f, 1.1f);
+	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
+	bool spinning = false; 
+	float orientationY = 0.0f;
+	bool wireframe = false;
+	bool metashape = true; 
+};
+vector<object_on_scene> scene; 
+
 
 
 //-------------------------------------------
@@ -109,14 +127,14 @@ GLuint textureCube;
 int main() {
 	// glfw init
 	glfwInit();
+
+	// glfw create window
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		
-	// glfw create window
 	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Bubble", nullptr, nullptr);
 	if (!window)
 	{
@@ -130,9 +148,6 @@ int main() {
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 
-	// mouse cursor disabled
-	// glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 	// glad load opengl function pointers
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -144,11 +159,9 @@ int main() {
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-	// we enable Z test
-	glEnable(GL_DEPTH_TEST);
-
-	//the "clear" color for the frame buffer
-	glClearColor(0.26f, 0.46f, 0.98f, 1.0f);
+	glEnable(GL_DEPTH_TEST); // Z test
+	
+	glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the frame buffer
 
 	// we create the Shader Programs used in the application
 	SetupShaders();
@@ -157,12 +170,14 @@ int main() {
 	Shader skybox_shader("src/shaders/skybox.vert", "src/shaders/skybox.frag");
 
 	// we load the cube map (we pass the path to the folder containing the 6 views)
-	textureCube = LoadTextureCube("src/texture/cube/colored/");
+	textureCube = LoadTextureCube("src/texture/cube/skybox/");
 
 	// we load the model(s) (code of Model class is in include/utils/model_v2.h)
 	Model cubeModel("src/models/cube.obj");
-	Model bunnyModel("src/models/bunny_lp.obj");
 	Model sphereModel("src/models/sphere.obj");
+	Model bunnyModel("src/models/bunny_lp.obj");
+	Model planeModel("src/models/plane.obj");
+
 
 	// we print on console the name of the first shader used
 	PrintCurrentShader(current_program);
@@ -178,9 +193,15 @@ int main() {
 	bool show_demo_window = true;
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
+	
 	// Setup style
 	ImGui::StyleColorsDark();
+	
+/*bject_on_scene obj;
+	obj.shape = BUNNY;
+	scene.push_back(obj);
+	obj.shape = CUBE;
+	scene.push_back(obj);*/
 
 //-------------------------------------------
 //				Rendering LOOP 				|========================================================
@@ -191,27 +212,17 @@ int main() {
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+		
+		//event functions
+		glfwPollEvents(); // Check is an I/O event is happening
+		apply_camera_movements();	// we apply FPS camera movements
 
-		// Check is an I/O event is happening
-		glfwPollEvents();
-		// we apply FPS camera movements
-		apply_camera_movements();
 		// View matrix (=camera): position, view direction, camera "up" vector
 		glm::mat4 view = camera.GetViewMatrix();
 
 		// we "clear" the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// we set the rendering mode
-		if (wireframe)
-			// Draw in wireframe
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		// if animated rotation is activated, than we increment the rotation angle using delta time and the rotation speed parameter
-		if (spinning)
-			orientationY += (deltaTime * spin_speed);
+		
 
 		//================================ OBJECT ===============================
 		shaders[current_program].Use();
@@ -245,53 +256,72 @@ int main() {
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
 
-		//==============BUNNY		
-		if (current_model == 0) 
-		{
-			glm::mat4 bunnyModelMatrix;
-			glm::mat3 bunnyNormalMatrix;
-			//bunnyModelMatrix = glm::translate(bunnyModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
-			bunnyModelMatrix = glm::rotate(bunnyModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-			bunnyModelMatrix = glm::scale(bunnyModelMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
-			bunnyNormalMatrix = glm::inverseTranspose(glm::mat3(view * bunnyModelMatrix));
-			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyModelMatrix));
-			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(bunnyNormalMatrix));
+		//==============Draw models
+		
+		for (int i = 0; i < scene.size(); i++) {
+			glm::mat4 modelMatrix;
+			glm::mat3 normalMatrix;
+			glm::vec3 translate;
 
-			// render del modello
-			bunnyModel.Draw(shaders[current_program]);
-		}//-------------Fine BUNNY
+			if (scene[i].wireframe)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			else
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		//==============CUBE
-		if (current_model == 2) 
-		{
-			glm::mat4 cubeModelMatrix;
-			glm::mat3 cubeNormalMatrix;
-			//cubeModelMatrix = glm::translate(cubeModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
-			cubeModelMatrix = glm::rotate(cubeModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-			cubeModelMatrix = glm::scale(cubeModelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
-			cubeNormalMatrix = glm::inverseTranspose(glm::mat3(view * cubeModelMatrix));
-			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(cubeModelMatrix));
-			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(cubeNormalMatrix));
+			if (scene[i].spinning) {
+				scene[i].orientationY += (deltaTime * spin_speed);
+			}
+			if(scene[i].isMoving)
+				translate = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z)) + scene[i].position;
+			else
+				translate =+ scene[i].position;
 
-			// we render the cube
-			cubeModel.Draw(shaders[current_program]);
-		}//---------------- fine CUBE
+			modelMatrix = glm::translate(modelMatrix, translate);
+			modelMatrix = glm::rotate(modelMatrix, glm::radians(scene[i].orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+			modelMatrix = glm::scale(modelMatrix, glm::vec3(scene[i].scale.x, scene[i].scale.y, scene[i].scale.z));
 
-		//================SPHERE
-		if (current_model == 1) 
-		{
-			glm::mat4 sphereModelMatrix;
-			glm::mat3 sphereNormalMatrix;
-			//sphereModelMatrix = glm::translate(sphereModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
-			sphereModelMatrix = glm::rotate(sphereModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-			sphereModelMatrix = glm::scale(sphereModelMatrix, glm::vec3(0.8f, 0.8f, 0.8f));
-			sphereNormalMatrix = glm::inverseTranspose(glm::mat3(view * sphereModelMatrix));
-			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(sphereModelMatrix));
-			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(sphereNormalMatrix));
+			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
+			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+			
+			Model *modeltoDraw = &cubeModel; 
+			switch (scene[i].shape) {
+				case 0: modeltoDraw = &cubeModel;	break;
+				case 1: modeltoDraw = &sphereModel;	break;
+				case 2: modeltoDraw = &bunnyModel;	break;
+				case 3: modeltoDraw = &planeModel;	break;
+			}
+			modeltoDraw->Draw(shaders[current_program]);
+			
+		}
+		
+		//==============SPHERE
+		/*
+		glm::mat4 sphereModelMatrix;
+		glm::mat3 sphereNormalMatrix;
+		sphereModelMatrix = glm::translate(sphereModelMatrix, glm::vec3(1.0f, 1.0f, 0.0f));
+		sphereModelMatrix = glm::rotate(sphereModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+		sphereModelMatrix = glm::scale(sphereModelMatrix, glm::vec3(0.8f, 0.8f, 0.8f));
+		sphereNormalMatrix = glm::inverseTranspose(glm::mat3(view * sphereModelMatrix));
+		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(sphereModelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(sphereNormalMatrix));
 
-			// we render the sphere
-			sphereModel.Draw(shaders[current_program]);
-		}//----------------fine SPHERE
+		// we render the sphere
+		sphereModel.Draw(shaders[current_program]);
+
+		glm::mat4 cubeModelMatrix;
+		glm::mat3 cubeNormalMatrix;
+		//cubeModelMatrix = glm::translate(cubeModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
+		cubeModelMatrix = glm::rotate(cubeModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+		cubeModelMatrix = glm::scale(cubeModelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+		cubeNormalMatrix = glm::inverseTranspose(glm::mat3(view * cubeModelMatrix));
+		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(cubeModelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(cubeNormalMatrix));
+
+		// we render the cube
+		cubeModel.Draw(shaders[current_program]);
+		//---------------- fine CUBE
+		*/
 
 		//==============SKYBOX
 		glDepthFunc(GL_LEQUAL);
@@ -321,9 +351,11 @@ int main() {
 //-------------------------------------------
 //				BORDELLO CON LA GUI			|========================================================
 //-------------------------------------------
-		// imgui render
+	// imgui render
 	    // imgui new frame
+
 		ImGui_ImplGlfwGL3_NewFrame();
+		ImGui::Begin("Main GUI");
 		{
 			if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
 				current_program = 0;
@@ -343,37 +375,33 @@ int main() {
 				ImGui::SliderFloat("FresnelPower", &mFresnelPower, -10.0f, 10.0f);
 			}
 
-			ImGui::Text("");
-			ImGui::Text("Background Texture");
-			if (ImGui::Button("Park"))
-				textureCube = LoadTextureCube("src/texture/cube/park/");
-			ImGui::SameLine();
-			if (ImGui::Button("Mountain"))
-				textureCube = LoadTextureCube("src/texture/cube/mountain/");
-			ImGui::SameLine();
-			if (ImGui::Button("Uffizi"))
-				textureCube = LoadTextureCube("src/texture/cube/uffizi/");
-			ImGui::SameLine();
-			if (ImGui::Button("Sky"))
-				textureCube = LoadTextureCube("src/texture/cube/skybox/"); 
-			ImGui::SameLine();
-			if (ImGui::Button("Colored"))
-				textureCube = LoadTextureCube("src/texture/cube/colored/");
-
-			ImGui::Text(" ");
-			ImGui::Text("Model");
-			if (ImGui::Button("Bunny"))
-				current_model = 0;
-			ImGui::SameLine();
-			if (ImGui::Button("Sphere"))
-				current_model = 1;
-			ImGui::SameLine();
-			if (ImGui::Button("Cube"))
-				current_model = 2;
-
-			ImGui::Text(" ");
-			ImGui::Checkbox("Spinning", &spinning);
-			ImGui::Checkbox("Wireframe", &wireframe);
+			if (ImGui::CollapsingHeader("Background Texture")) {
+				if (ImGui::Button("Park"))
+					textureCube = LoadTextureCube("src/texture/cube/park/");
+				ImGui::SameLine();
+				if (ImGui::Button("Mountain"))
+					textureCube = LoadTextureCube("src/texture/cube/mountain/");
+				ImGui::SameLine();
+				if (ImGui::Button("Uffizi"))
+					textureCube = LoadTextureCube("src/texture/cube/uffizi/");
+				ImGui::SameLine();
+				if (ImGui::Button("Sky"))
+					textureCube = LoadTextureCube("src/texture/cube/skybox/");
+				ImGui::SameLine();
+				if (ImGui::Button("Colored"))
+					textureCube = LoadTextureCube("src/texture/cube/colored/");
+			}
+			if (ImGui::CollapsingHeader("Add model")) {
+				int choose; 
+				object_on_scene newObject; 
+				ImGui::Text("Shape");	
+				const char* items[] = { "Cube", "Sphere", "Bunny" };
+				ImGui::Combo("Shape", &choose, "Cube\0Sphere\0Bunny");
+				newObject.shape = available_models(choose);
+				
+				if (ImGui::Button("create object"))
+					scene.push_back(newObject);
+			}
 
 			ImGui::Text(" ");
 			if (ImGui::Button("Print values"))
@@ -385,20 +413,67 @@ int main() {
 				std::cout << "FresnelPower value " << mFresnelPower << endl;
 			
 			}
-			ImGui::Text(" ");
-			ImGui::ColorEdit3("clear color", (float*)& clear_color); // Edit 3 floats representing a color
 
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
+		
+
+			//ImGui::Text(" ");
+			//ImGui::ColorEdit3("clear color", (float*)& clear_color); // Edit 3 floats representing a color
+
+			//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
+			//	ImGui::Checkbox("Another Window", &show_another_window);
 
 			//ImGui::Text("counter = %d", counter);
-
+		
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			
 		}
+		ImGui::End();
+		
+		int choose;
+		vector <int> toRemove;
+		string label;
+		for (int i = 0; i < scene.size(); i++) {
+			label = "Object GUI - " + std::to_string(i);
+			ImGui::Begin(label.c_str());
+			
+
+			ImGui::Checkbox("Moving", &scene[i].isMoving);
+			if (scene[i].isMoving && ImGui::CollapsingHeader("Change movement"))
+			{
+				ImGui::SliderFloat("x", &scene[i].movement.x, -5.0f, 5.0f);
+				ImGui::SliderFloat("y", &scene[i].movement.y, -5.0f, 5.0f);
+				ImGui::SliderFloat("z", &scene[i].movement.z, -5.0f, 5.0f);
+			}
+			if (ImGui::CollapsingHeader("Scale & position")) {
+				ImGui::Text("\nPosition");
+				ImGui::SliderFloat("x", &scene[i].position.x, -5.0f, 5.0f);
+				ImGui::SliderFloat("y", &scene[i].position.y, -5.0f, 5.0f);
+				ImGui::SliderFloat("z", &scene[i].position.z, -5.0f, 5.0f);
+
+				ImGui::Text("\nScale");
+				ImGui::SliderFloat("Scale", &scene[i].scale.x, 0.0f, 5.0f);
+				scene[i].scale.y = scene[i].scale.x;
+				scene[i].scale.z = scene[i].scale.x;
+			}
+
+			ImGui::Checkbox("Spinning", &scene[i].spinning);
+			ImGui::Checkbox("Wireframe", &scene[i].wireframe);
+
+			ImGui::Checkbox("Positive Metashape", &scene[i].metashape);
+
+			if (ImGui::Button("Delete Model"))
+				toRemove.push_back(i);
+			
+			ImGui::End();
+		}
+		for (int i = 0; i < toRemove.size(); i++)
+			scene.erase(scene.begin() + toRemove[i]);
+		toRemove.clear();
+	
+
 		ImGui::Render();
 		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-		
+	
 		//swap dei buffer
 		glfwSwapBuffers(window);
 	}
@@ -496,8 +571,8 @@ void SetupShaders()
 	shaders.push_back(shader1);
 	Shader shader2("src/shaders/reflect.vert", "src/shaders/fresnel.frag");
 	shaders.push_back(shader2);
-	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
-	shaders.push_back(shader3);
+//	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
+	//shaders.push_back(shader3);
 	
 }
 
