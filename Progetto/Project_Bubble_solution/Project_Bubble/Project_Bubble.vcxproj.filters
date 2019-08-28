@@ -16,6 +16,8 @@
     <None Include="src\shaders\reflect.vert" />
     <None Include="src\shaders\skybox.frag" />
     <None Include="src\shaders\skybox.vert" />
+    <None Include="src\shaders\mb_metaball3d.frag" />
+    <None Include="src\shaders\prova.frag" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />

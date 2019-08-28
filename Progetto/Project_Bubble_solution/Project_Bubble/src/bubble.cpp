@@ -88,15 +88,15 @@ Camera camera(glm::vec3(0.0f, 0.0f, 7.0f), GL_FALSE);
 glm::vec3 lightPos0 = glm::vec3(0.0f, 0.0f, 10.0f);
 
 //FRESNEL
-GLfloat Eta = 1.00 / 1.52;
+GLfloat Eta = 1.0 / 1.52; 
 GLfloat mFresnelPower = 5;
 
 // CUBE MAP Texture
 GLuint textureCube;
 
 // SHADERS
-enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE };
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE" };
+enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE};
+const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE"};
 GLuint current_program = REFLECTION;
 vector<Shader> shaders;
 
@@ -107,7 +107,7 @@ const char* print_available_Models[] = { "CUBE", "SPHERE", "BUNNY" };
 
 
 struct object_on_scene {
-	available_models shape = CUBE; 
+	int shape; 
 	glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f); 
 	bool isMoving = false; 
 	glm::vec3 movement = glm::vec3(0.1f, 1.0f, 1.1f);
@@ -119,7 +119,7 @@ struct object_on_scene {
 };
 vector<object_on_scene> scene; 
 
-
+int choosemodel=0;
 
 //-------------------------------------------
 //			MAIN							|========================================================
@@ -163,16 +163,14 @@ int main() {
 	
 	glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the frame buffer
 
-	// we create the Shader Programs used in the application
+	//SETUP SHADERS
 	SetupShaders();
 
-	// we create the Shader Program used for the environment map
+	//Load skybox and skybox's shader
 	Shader skybox_shader("src/shaders/skybox.vert", "src/shaders/skybox.frag");
-
-	// we load the cube map (we pass the path to the folder containing the 6 views)
 	textureCube = LoadTextureCube("src/texture/cube/skybox/");
 
-	// we load the model(s) (code of Model class is in include/utils/model_v2.h)
+	// LOAD MODELs
 	Model cubeModel("src/models/cube.obj");
 	Model sphereModel("src/models/sphere.obj");
 	Model bunnyModel("src/models/bunny_lp.obj");
@@ -194,21 +192,15 @@ int main() {
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	
-	// Setup style
 	ImGui::StyleColorsDark();
 	
-/*bject_on_scene obj;
-	obj.shape = BUNNY;
-	scene.push_back(obj);
-	obj.shape = CUBE;
-	scene.push_back(obj);*/
 
 //-------------------------------------------
 //				Rendering LOOP 				|========================================================
 //-------------------------------------------
 	while (!glfwWindowShouldClose(window))
 	{
-		// we determine the time passed from the beginning
+		// Current Frame and DeltaTime
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -255,6 +247,10 @@ int main() {
 		//si cercano i puntatori delle uniform della projectione e della view, poi ci si assegnano i valori
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
+
+		if(current_program == BUBBLE)
+			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"),mFresnelPower);
+
 
 		//==============Draw models
 		
@@ -353,7 +349,6 @@ int main() {
 //-------------------------------------------
 	// imgui render
 	    // imgui new frame
-
 		ImGui_ImplGlfwGL3_NewFrame();
 		ImGui::Begin("Main GUI");
 		{
@@ -371,9 +366,11 @@ int main() {
 
 			if (current_program == 1) {
 				ImGui::Text("Fresnel");                           // Display some text (you can use a format string too)
-				ImGui::SliderFloat("Eta", &Eta, -10.0f, 10.0f);  // Edit 1 float using a slider from 0.0f to 1.0f   
+				ImGui::SliderFloat("Eta", &Eta, -1.0f, 2.0f);  // Edit 1 float using a slider from 0.0f to 1.0f   
 				ImGui::SliderFloat("FresnelPower", &mFresnelPower, -10.0f, 10.0f);
 			}
+			if (current_program == 2)
+				ImGui::Text("Bubble");
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
 				if (ImGui::Button("Park"))
@@ -391,17 +388,16 @@ int main() {
 				if (ImGui::Button("Colored"))
 					textureCube = LoadTextureCube("src/texture/cube/colored/");
 			}
-			if (ImGui::CollapsingHeader("Add model")) {
-				int choose; 
-				object_on_scene newObject; 
-				ImGui::Text("Shape");	
-				const char* items[] = { "Cube", "Sphere", "Bunny" };
-				ImGui::Combo("Shape", &choose, "Cube\0Sphere\0Bunny");
-				newObject.shape = available_models(choose);
-				
-				if (ImGui::Button("create object"))
-					scene.push_back(newObject);
+			ImGui::Text(" ");
+			ImGui::Separator;
+
+			if (ImGui::Button("Create object")) {
+				object_on_scene newObject;
+					
+				newObject.shape = available_models(choosemodel);
+				scene.push_back(newObject);
 			}
+			
 
 			ImGui::Text(" ");
 			if (ImGui::Button("Print values"))
@@ -413,8 +409,6 @@ int main() {
 				std::cout << "FresnelPower value " << mFresnelPower << endl;
 			
 			}
-
-		
 
 			//ImGui::Text(" ");
 			//ImGui::ColorEdit3("clear color", (float*)& clear_color); // Edit 3 floats representing a color
@@ -432,10 +426,14 @@ int main() {
 		int choose;
 		vector <int> toRemove;
 		string label;
+
 		for (int i = 0; i < scene.size(); i++) {
 			label = "Object GUI - " + std::to_string(i);
 			ImGui::Begin(label.c_str());
-			
+
+			ImGui::Text("Shape");
+			ImGui::Combo("Shape", &scene[i].shape, "Cube\0Sphere\0Bunny");
+			//scene[i].shape = available_models(choose);
 
 			ImGui::Checkbox("Moving", &scene[i].isMoving);
 			if (scene[i].isMoving && ImGui::CollapsingHeader("Change movement"))
@@ -571,8 +569,8 @@ void SetupShaders()
 	shaders.push_back(shader1);
 	Shader shader2("src/shaders/reflect.vert", "src/shaders/fresnel.frag");
 	shaders.push_back(shader2);
-//	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
-	//shaders.push_back(shader3);
+	Shader shader3("src/shaders/reflect.vert", "src/shaders/prova.frag");
+	shaders.push_back(shader3);
 	
 }
 
