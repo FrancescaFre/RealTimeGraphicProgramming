@@ -30,8 +30,10 @@
     <None Include="src\object\firstFragShader.fs" />
     <None Include="src\object\firstVertexShader.vs" />
     <None Include="src\shaders\fresnel.frag" />
+    <None Include="src\shaders\inigo.frag" />
     <None Include="src\shaders\mb_metaball3d.frag" />
-    <None Include="src\shaders\prova.frag" />
+    <None Include="src\shaders\bubble.frag" />
+    <None Include="src\shaders\metaball.frag" />
     <None Include="src\shaders\reflect.frag" />
     <None Include="src\shaders\reflect.vert" />
     <None Include="src\shaders\skybox.frag" />

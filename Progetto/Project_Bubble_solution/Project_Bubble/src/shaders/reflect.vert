@@ -27,7 +27,6 @@ uniform mat4 projectionMatrix;
 out vec4 worldPosition;
 out vec3 worldNormal;
 
-
 void main(){
 
   // vertex position in world coordinate (= we apply only trasformations)

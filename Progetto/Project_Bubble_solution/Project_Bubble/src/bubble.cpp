@@ -65,6 +65,7 @@ void SetupShaders();
 void DeleteShaders();
 void PrintCurrentShader(int shader);
 GLint LoadTextureCube(string path);
+void CameraMovement(GLfloat frame);
 
 // keyboard keys
 bool keys[1024];
@@ -83,7 +84,7 @@ GLfloat spin_speed = 30.0f;
 
 bool spinning, wireframe; 
 //Camera end light
-Camera camera(glm::vec3(0.0f, 0.0f, 7.0f), GL_FALSE);
+Camera camera(glm::vec3(0.0f,0.0f, 7.0f), GL_FALSE);
 
 glm::vec3 lightPos0 = glm::vec3(0.0f, 0.0f, 10.0f);
 
@@ -95,8 +96,8 @@ GLfloat mFresnelPower = 5;
 GLuint textureCube;
 
 // SHADERS
-enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE};
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE"};
+enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE, METABALL};
+const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE", "METABALL"};
 GLuint current_program = REFLECTION;
 vector<Shader> shaders;
 
@@ -120,7 +121,7 @@ struct object_on_scene {
 vector<object_on_scene> scene; 
 
 int choosemodel=0;
-
+bool cameraMovement = false; 
 //-------------------------------------------
 //			MAIN							|========================================================
 //-------------------------------------------
@@ -158,6 +159,10 @@ int main() {
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
+	
+	GLint m_viewport[4];
+
+	glGetIntegerv(GL_VIEWPORT, m_viewport);
 
 	glEnable(GL_DEPTH_TEST); // Z test
 	
@@ -209,6 +214,9 @@ int main() {
 		glfwPollEvents(); // Check is an I/O event is happening
 		apply_camera_movements();	// we apply FPS camera movements
 
+		if (cameraMovement == true)
+			CameraMovement(currentFrame);
+
 		// View matrix (=camera): position, view direction, camera "up" vector
 		glm::mat4 view = camera.GetViewMatrix();
 
@@ -248,12 +256,17 @@ int main() {
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
 
-		if(current_program == BUBBLE)
+		if (current_program == BUBBLE)
 			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"),mFresnelPower);
-
-
-		//==============Draw models
 		
+		glm::vec3 blob = glm::vec4(0.0);
+		for (int i = 0; i < 10; i++)
+		{
+			string nameVar = "blob" + std::to_string(i);
+			glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
+		}
+	
+		//==============Draw models
 		for (int i = 0; i < scene.size(); i++) {
 			glm::mat4 modelMatrix;
 			glm::mat3 normalMatrix;
@@ -267,10 +280,10 @@ int main() {
 			if (scene[i].spinning) {
 				scene[i].orientationY += (deltaTime * spin_speed);
 			}
-			if(scene[i].isMoving)
+			if (scene[i].isMoving)
 				translate = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z)) + scene[i].position;
 			else
-				translate =+ scene[i].position;
+				translate = +scene[i].position;
 
 			modelMatrix = glm::translate(modelMatrix, translate);
 			modelMatrix = glm::rotate(modelMatrix, glm::radians(scene[i].orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -279,46 +292,30 @@ int main() {
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
-			
-			Model *modeltoDraw = &cubeModel; 
-			switch (scene[i].shape) {
+
+			if (current_program == METABALL)
+			{
+				if (i < scene.size()) {
+					blob = glm::vec4(translate, scene[i].scale.x);
+					string nameVar = "blob" + std::to_string(i);
+					glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
+					//glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+					cout << "nome variabile " << nameVar << "\nvalore inserito " << blob.x << "." << blob.y << "." << blob.z <<" scale "<<scene[i].scale.x << endl;
+				}
+			}
+
+			if (current_program != METABALL) {
+				Model* modeltoDraw = &cubeModel;
+				switch (scene[i].shape) {
 				case 0: modeltoDraw = &cubeModel;	break;
 				case 1: modeltoDraw = &sphereModel;	break;
 				case 2: modeltoDraw = &bunnyModel;	break;
 				case 3: modeltoDraw = &planeModel;	break;
+				}
+				modeltoDraw->Draw(shaders[current_program]);
 			}
-			modeltoDraw->Draw(shaders[current_program]);
-			
 		}
 		
-		//==============SPHERE
-		/*
-		glm::mat4 sphereModelMatrix;
-		glm::mat3 sphereNormalMatrix;
-		sphereModelMatrix = glm::translate(sphereModelMatrix, glm::vec3(1.0f, 1.0f, 0.0f));
-		sphereModelMatrix = glm::rotate(sphereModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-		sphereModelMatrix = glm::scale(sphereModelMatrix, glm::vec3(0.8f, 0.8f, 0.8f));
-		sphereNormalMatrix = glm::inverseTranspose(glm::mat3(view * sphereModelMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(sphereModelMatrix));
-		glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(sphereNormalMatrix));
-
-		// we render the sphere
-		sphereModel.Draw(shaders[current_program]);
-
-		glm::mat4 cubeModelMatrix;
-		glm::mat3 cubeNormalMatrix;
-		//cubeModelMatrix = glm::translate(cubeModelMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
-		cubeModelMatrix = glm::rotate(cubeModelMatrix, glm::radians(orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-		cubeModelMatrix = glm::scale(cubeModelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
-		cubeNormalMatrix = glm::inverseTranspose(glm::mat3(view * cubeModelMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(cubeModelMatrix));
-		glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(cubeNormalMatrix));
-
-		// we render the cube
-		cubeModel.Draw(shaders[current_program]);
-		//---------------- fine CUBE
-		*/
-
 		//==============SKYBOX
 		glDepthFunc(GL_LEQUAL);
 		skybox_shader.Use();
@@ -360,6 +357,11 @@ int main() {
 			ImGui::SameLine();
 			if (ImGui::Button("Bubble"))
 				current_program = 2;
+			ImGui::SameLine();
+			if (ImGui::Button("Metaball"))
+				current_program = 3;
+
+			//-------------------------
 
 			if (current_program == 0) 
 				ImGui::Text("Reflect");
@@ -371,6 +373,9 @@ int main() {
 			}
 			if (current_program == 2)
 				ImGui::Text("Bubble");
+
+			if (current_program == 3)
+				ImGui::Text("Metaball");
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
 				if (ImGui::Button("Park"))
@@ -388,18 +393,33 @@ int main() {
 				if (ImGui::Button("Colored"))
 					textureCube = LoadTextureCube("src/texture/cube/colored/");
 			}
+
 			ImGui::Text(" ");
 			ImGui::Separator;
+			ImGui::Text("%d object, MAX 10	", scene.size());
+			ImGui::SameLine();
+			if (scene.size() < 10) {
+				if (ImGui::Button("Create object")) {
+					object_on_scene newObject;
 
-			if (ImGui::Button("Create object")) {
-				object_on_scene newObject;
-					
-				newObject.shape = available_models(choosemodel);
-				scene.push_back(newObject);
+					newObject.shape = available_models(choosemodel);
+					scene.push_back(newObject);
+				}
+			}
+			else {
+				ImGui::Text("Limit reached");
 			}
 			
 
 			ImGui::Text(" ");
+			ImGui::Checkbox("Move camera", &cameraMovement);
+			if (cameraMovement == false)
+				camera.Position = glm::vec3(0.0f, 0.0f, 7.0f);
+
+			ImGui::SliderFloat("x", &camera.Position.x, -5.0f, 5.0f);
+			ImGui::SliderFloat("y", &camera.Position.y, -5.0f, 5.0f);
+			ImGui::SliderFloat("z", &camera.Position.z, -5.0f, 5.0f);
+
 			if (ImGui::Button("Print values"))
 			{
 				std::cout << "-------------" << endl;
@@ -569,8 +589,10 @@ void SetupShaders()
 	shaders.push_back(shader1);
 	Shader shader2("src/shaders/reflect.vert", "src/shaders/fresnel.frag");
 	shaders.push_back(shader2);
-	Shader shader3("src/shaders/reflect.vert", "src/shaders/prova.frag");
+	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
 	shaders.push_back(shader3);
+	Shader shader4("src/shaders/reflect.vert", "src/shaders/metaball.frag");
+	shaders.push_back(shader4);
 	
 }
 
@@ -665,3 +687,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	//camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
+/////////////////////////////////////////
+void CameraMovement(GLfloat frame) {
+	float angle = 0.5 * frame;
+
+	camera.Position = glm::vec3(0.0f, 0.0f, 0.0f) + glm::vec3(15.0 * sin(angle),
+																12.5 * cos(0.4 * angle),
+																15.0 * cos(angle));
+	
+	
+	
+}

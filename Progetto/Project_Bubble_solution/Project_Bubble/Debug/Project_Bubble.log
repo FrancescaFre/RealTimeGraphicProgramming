@@ -1,15 +1,17 @@
 ﻿  bubble.cpp
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(91,25): warning C4305:  'initializing': truncation from 'double' to 'GLfloat'
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(204,24): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(257,21): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(392,11): warning C4551:  function call missing argument list
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(430,21): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(467,21): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(426,7): warning C4101:  'choose': unreferenced local variable
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(651,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(652,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(657,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(658,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(661,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(662,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(92,25): warning C4305:  'initializing': truncation from 'double' to 'GLfloat'
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(209,24): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(270,21): warning C4018:  '<': signed/unsigned mismatch
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(298,11): warning C4018:  '<': signed/unsigned mismatch
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(398,11): warning C4551:  function call missing argument list
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(450,21): warning C4018:  '<': signed/unsigned mismatch
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(487,21): warning C4018:  '<': signed/unsigned mismatch
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(446,7): warning C4101:  'choose': unreferenced local variable
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(673,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(674,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(679,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(680,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(683,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(684,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
+D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\bubble.cpp(692,14): warning C4244:  'initializing': conversion from 'double' to 'float', possible loss of data
   Project_Bubble.vcxproj -> D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.exe

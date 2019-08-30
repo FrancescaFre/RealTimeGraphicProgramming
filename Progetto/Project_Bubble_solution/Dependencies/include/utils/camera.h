@@ -81,7 +81,9 @@ public:
     // it returns the current view matrix
     glm::mat4 GetViewMatrix()
     {
-        return glm::lookAt(this->Position, this->Position + this->Front, this->Up);
+        //return glm::lookAt(this->Position, this->Position + this->Front, this->Up);
+		return glm::lookAt(this->Position, glm::vec3(0.0,0.0,0.0), this->Up);
+
     }
 
     //////////////////////////////////////////
@@ -124,6 +126,8 @@ public:
         // the camera reference system is updated using the new camera rotations
         this->updateCameraVectors();
     }
+
+	
 
 private:
     //////////////////////////////////////////
