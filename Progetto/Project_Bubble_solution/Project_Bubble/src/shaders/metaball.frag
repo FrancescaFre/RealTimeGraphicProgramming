@@ -36,6 +36,10 @@ uniform vec4 blob7;
 uniform vec4 blob8; 
 uniform vec4 blob9; 
 
+
+
+
+
 vec4 fragCoord = gl_FragCoord;
 
 //------------------- Variabili per il Setup
@@ -66,7 +70,7 @@ float travel; //t
 float out_of_range; 
 
 //------------------- Variabili per il distance field
-vec4 blobs[10] = {blob0, blob1, blob2, blob3, blob4, blob5, blob6, blob7, blob8, blob8}; //posizione + raggio
+vec4 blobs[10]; //posizione + raggio
 float m; 
 float p;
 //distanza minima tra il raggio corrente e la superficie più vicina
@@ -188,9 +192,6 @@ void main(){
 	//---InitPlane
 	pixel.x *=resolution.x/resolution.y; //per avere il pixel largo giusto
 	
-	for( int ax=0; ax<AA; ax++ )
-	for( int ay=0; ay<AA; ay++ )
-
 	//---LookAt
 	cam_forward = normalize( vec3(0.0,0.0,0.0) - cameraPosition );
 	cam_left = normalize( cross(cam_forward, world_up) );
