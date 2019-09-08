@@ -52,6 +52,11 @@ bool GLLogCall(const char* function, const char* file, int line) {
 	return true;
 }
 
+//per usare la scheda grafica dedicata anzichè l'integrata (povera intel <3) 
+extern "C"
+{
+	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+}
 // dimensions of application's window
 GLuint screenWidth = 800, screenHeight = 600;
 
@@ -96,16 +101,15 @@ GLfloat mFresnelPower = 5;
 GLuint textureCube;
 
 // SHADERS
-enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE, METABALL};
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE", "METABALL"};
+enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE, RAYMARCHING};
+const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE", "RAYMARCHING"};
 GLuint current_program = REFLECTION;
 vector<Shader> shaders;
+
 
 //MODELS
 enum available_models { CUBE, SPHERE, BUNNY };
 const char* print_available_Models[] = { "CUBE", "SPHERE", "BUNNY" };
-
-
 
 struct object_on_scene {
 	int shape; 
@@ -122,6 +126,7 @@ vector<object_on_scene> scene;
 
 int choosemodel=0;
 bool cameraMovement = false; 
+int rayMarchingShader = 0; 
 //-------------------------------------------
 //			MAIN							|========================================================
 //-------------------------------------------
@@ -259,52 +264,62 @@ int main() {
 		if (current_program == BUBBLE)
 			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"),mFresnelPower);
 		
-		glm::vec3 blob = glm::vec4(0.0);
-		for (int i = 0; i < 10; i++)
-		{
-			string nameVar = "blob" + std::to_string(i);
-			glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
-		}
-	
-		//==============Draw models
-		for (int i = 0; i < scene.size(); i++) {
+		if (current_program == RAYMARCHING) {
+			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "time"), currentFrame);
+			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "camera"), 1, GL_FALSE, glm::value_ptr(camera.GetViewMatrix()));
+
 			glm::mat4 modelMatrix;
+			modelMatrix = glm::scale(modelMatrix, glm::vec3(10.));
+
 			glm::mat3 normalMatrix;
-			glm::vec3 translate;
-
-			if (scene[i].wireframe)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			else
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-			if (scene[i].spinning) {
-				scene[i].orientationY += (deltaTime * spin_speed);
-			}
-			if (scene[i].isMoving)
-				translate = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z)) + scene[i].position;
-			else
-				translate = +scene[i].position;
-
-			modelMatrix = glm::translate(modelMatrix, translate);
-			modelMatrix = glm::rotate(modelMatrix, glm::radians(scene[i].orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-			modelMatrix = glm::scale(modelMatrix, glm::vec3(scene[i].scale.x, scene[i].scale.y, scene[i].scale.z));
+			
+			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
-			if (current_program == METABALL)
+
+			glm::vec4 blob;
+			for (int i = 0; i < 10; i++)
 			{
-				if (i < scene.size()) {
-					blob = glm::vec4(translate, scene[i].scale.x);
-					string nameVar = "blob" + std::to_string(i);
-					glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
-					//glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-					cout << "nome variabile " << nameVar << "\nvalore inserito " << blob.x << "." << blob.y << "." << blob.z <<" scale "<<scene[i].scale.x << endl;
-				}
+				blob = i < scene.size() ? glm::vec4(scene[i].position, scene[i].scale.x) : glm::vec4(0.0);
+				string nameVar = "blobsPos[" + std::to_string(i)+"]";
+				
+				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
+				//cout << "nome variabile " << nameVar << "\nvalore inserito " << blob[0] << "." << blob[1] << "." << blob[2] << " scale " << blob[3] << endl;
 			}
 
-			if (current_program != METABALL) {
+			cubeModel.Draw(shaders[current_program]);
+		}
+		//==============Draw models
+		if(current_program != RAYMARCHING){
+			for (int i = 0; i < scene.size(); i++) {
+				glm::mat4 modelMatrix;
+				glm::mat3 normalMatrix;
+				glm::vec3 translate;
+
+				if (scene[i].wireframe)
+					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				else
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+				if (scene[i].spinning) {
+					scene[i].orientationY += (deltaTime * spin_speed);
+				}
+				if (scene[i].isMoving)
+					translate = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z)) + scene[i].position;
+				else
+					translate = +scene[i].position;
+
+				modelMatrix = glm::translate(modelMatrix, translate);
+				modelMatrix = glm::rotate(modelMatrix, glm::radians(scene[i].orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
+				modelMatrix = glm::scale(modelMatrix, glm::vec3(scene[i].scale.x, scene[i].scale.y, scene[i].scale.z));
+
+				normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
+				glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+				glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+
 				Model* modeltoDraw = &cubeModel;
 				switch (scene[i].shape) {
 				case 0: modeltoDraw = &cubeModel;	break;
@@ -347,6 +362,7 @@ int main() {
 	// imgui render
 	    // imgui new frame
 		ImGui_ImplGlfwGL3_NewFrame();
+		//begin of main gui
 		ImGui::Begin("Main GUI");
 		{
 			if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
@@ -358,7 +374,7 @@ int main() {
 			if (ImGui::Button("Bubble"))
 				current_program = 2;
 			ImGui::SameLine();
-			if (ImGui::Button("Metaball"))
+			if (ImGui::Button("RayMarching"))
 				current_program = 3;
 
 			//-------------------------
@@ -374,8 +390,21 @@ int main() {
 			if (current_program == 2)
 				ImGui::Text("Bubble");
 
-			if (current_program == 3)
-				ImGui::Text("Metaball");
+			if (current_program == 3) {
+				ImGui::Text("RayMarching");	
+				if (ImGui::Button("Blin-Phonn"))                            
+					rayMarchingShader = 0;
+				ImGui::SameLine();
+				if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+					rayMarchingShader = 1;
+				ImGui::SameLine();
+				if (ImGui::Button("Fresnel"))
+					rayMarchingShader = 2;
+				ImGui::SameLine();
+				if (ImGui::Button("Bubble"))
+					rayMarchingShader = 3;
+				ImGui::SameLine();
+			}
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
 				if (ImGui::Button("Park"))
@@ -427,19 +456,14 @@ int main() {
 				PrintCurrentShader(current_program); 
 				std::cout << "Eta value " << Eta << endl;
 				std::cout << "FresnelPower value " << mFresnelPower << endl;
-			
+				
+
+				std::cout << "-------------" << endl;
+
+
 			}
-
-			//ImGui::Text(" ");
-			//ImGui::ColorEdit3("clear color", (float*)& clear_color); // Edit 3 floats representing a color
-
-			//ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
-			//	ImGui::Checkbox("Another Window", &show_another_window);
-
-			//ImGui::Text("counter = %d", counter);
 		
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-			
 		}
 		ImGui::End();
 		
@@ -447,6 +471,7 @@ int main() {
 		vector <int> toRemove;
 		string label;
 
+		//gui for each object
 		for (int i = 0; i < scene.size(); i++) {
 			label = "Object GUI - " + std::to_string(i);
 			ImGui::Begin(label.c_str());
@@ -591,9 +616,8 @@ void SetupShaders()
 	shaders.push_back(shader2);
 	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
 	shaders.push_back(shader3);
-	Shader shader4("src/shaders/reflect.vert", "src/shaders/metaball.frag");
+	Shader shader4("src/shaders/reflect.vert", "src/shaders/rayMarching.frag");
 	shaders.push_back(shader4);
-	
 }
 
 //////////////////////////////////////////
@@ -691,10 +715,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void CameraMovement(GLfloat frame) {
 	float angle = 0.5 * frame;
 
-	camera.Position = glm::vec3(0.0f, 0.0f, 0.0f) + glm::vec3(15.0 * sin(angle),
-																12.5 * cos(0.4 * angle),
-																15.0 * cos(angle));
-	
-	
-	
+	camera.Position = glm::vec3(0.0f, 5.0f, 0.0f) + glm::vec3(10.0 * sin(angle), 1.0,
+														    10.0 * cos( angle));
+															//5 * cos(angle));
+
+	//camera.Position += vec2(sin(time) * 2., cos(time) * 2.);
 }

@@ -1,30 +1,3 @@
-/*
-20_skybox.vert: vertex shader for the visualization of the cube map as environment map
-
-author: Davide Gadia
-
-Real-Time Graphics Programming - a.a. 2018/2019
-Master degree in Computer Science
-Universita' degli Studi di Milano
-*/
-
-/*
-OpenGL coordinate system (right-handed)
-positive X axis points right
-positive Y axis points up
-positive Z axis points "outside" the screen
-
-
-                              Y
-                              |
-                              |
-                              |________X
-                             /
-                            /
-                           /
-                          Z
-*/
-
 
 #version 330 core
 
@@ -46,7 +19,8 @@ void main()
 		interp_UVW = position;
 
 		// we apply the transformations to the vertex
-    vec4 pos = projectionMatrix * viewMatrix * vec4(position, 1.0);
+		vec4 pos = projectionMatrix * viewMatrix * vec4(position, 1.0);
+
 		// we want to set the Z coordinate of the projected vertex at the maximum depth (i.e., we want Z to be equal to 1.0 after the projection divide)-> we set Z equal to W (because in the projection divide, after clipping, all the components will be divided by W).
 		//This means that, during the depth test, the fragments of the environment map will have maximum depth (see comments in the code of the main application)
 		gl_Position = pos.xyww;

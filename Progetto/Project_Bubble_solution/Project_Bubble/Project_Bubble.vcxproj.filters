@@ -20,6 +20,15 @@
     <None Include="src\shaders\bubble.frag" />
     <None Include="src\shaders\metaball.frag" />
     <None Include="src\shaders\inigo.frag" />
+    <None Include="src\shaders\ennesimoinigo.frag" />
+    <None Include="src\shaders\metaballs\ennesimoinigo.frag" />
+    <None Include="src\shaders\metaballs\inigo.frag" />
+    <None Include="src\shaders\metaballs\mb_metaball3d.frag" />
+    <None Include="src\shaders\metaballs\metaball.frag" />
+    <None Include="src\shaders\basicMeta.frag" />
+    <None Include="src\shaders\basicMeta.vert" />
+    <None Include="src\shaders\rayMarching.frag" />
+    <None Include="src\shaders\rayMarching1.frag" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />
