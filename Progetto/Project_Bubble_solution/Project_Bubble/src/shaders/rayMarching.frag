@@ -113,7 +113,13 @@ Hit GetDist(vec3 pos)
     result.dist = 1e20;
 
    //operation  
-    Hit sphere0 = df_Sphere(pos, blobs[0].position, blobs[0].size, blobs[0].color);
+    
+	for(int i = 0; i < 10; i ++){
+		
+	}
+
+	
+	Hit sphere0 = df_Sphere(pos, blobs[0].position, blobs[0].size, blobs[0].color);
 	Hit sphere1 = df_Sphere(pos, blobs[1].position, blobs[1].size, blobs[1].color);
      
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
@@ -146,10 +152,9 @@ Hit GetDist(vec3 pos)
 
   //	Hit planeDist = df_plane (pos, vec3(0.0,0.5,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
 
-  //  if (result.dist < planeDist.dist)
+    //if (result.dist < planeDist.dist)
         return result;
     //else return planeDist;
-
 }
 //---------------------------- Funzione per fare il raymarching 
 RM RayMarch(vec3 ray_origin, vec3 ray_direction)
@@ -243,7 +248,6 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, vec3 typeColor)
 		finalColor = mix(refractedColor, reflectedColor, clamp (Ratio, 0.0,1.0));
     }
 
-
 		float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
 		if (hit < length(surfacePoint-lightPosition))
 		finalColor *= 0.3;
@@ -267,10 +271,7 @@ vec3 BackGroundGradient( vec2 uv )
 //--------------------------------------------------------------------------------
 vec4 Background( vec2 uv )
 {
-   vec4 color = texture(tCube, vec3(uv,1.0)); //BackGroundGradient(uv);
-
-  // float sunStrength = mix( 2.8, 3.0, sin( time ) * 0.5 + 0.5 );
-  
+   vec4 color = texture(tCube, vec3(uv,1.0)); //BackGroundGradient(uv); 
    return color;
 }
 //AIUTO: COME SI INTERPRETA UNA MAT4X4?
@@ -318,7 +319,7 @@ void main()
     {
         blobs[i].position = blobsPos[i].xyz;
 		blobs[i].size = blobsPos[i].w;
-		blobs[i].color = vec3(float(3)*0.2,float(3)*0.2,float(3)*0.9)*i;
+		blobs[i].color = vec3(float(i)*0.2,float(i)*0.2,float(i)*0.9);
        // float m = mod(float(i),2.);
        // blobs[i].position.xz += vec2(sin(time)*(1.-m), cos(time)*(1.-m));
     }

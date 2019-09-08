@@ -280,10 +280,17 @@ int main() {
 			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
 
-			glm::vec4 blob;
+			glm::vec4 blob = glm::vec4(0.0);
 			for (int i = 0; i < 10; i++)
 			{
-				blob = i < scene.size() ? glm::vec4(scene[i].position, scene[i].scale.x) : glm::vec4(0.0);
+				float m = i % 4; 
+				if (i < scene.size()) {
+					glm::vec3 newPosition = scene[i].position; 
+					newPosition.x += sin(currentFrame) * (m);
+					newPosition.y += cos(currentFrame) * (1-m);
+
+					blob = glm::vec4(newPosition, scene[i].scale.x);
+				}
 				string nameVar = "blobsPos[" + std::to_string(i)+"]";
 				
 				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
@@ -403,7 +410,6 @@ int main() {
 				ImGui::SameLine();
 				if (ImGui::Button("Bubble"))
 					rayMarchingShader = 3;
-				ImGui::SameLine();
 			}
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
