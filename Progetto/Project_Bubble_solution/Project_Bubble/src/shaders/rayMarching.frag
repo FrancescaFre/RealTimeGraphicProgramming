@@ -21,7 +21,7 @@ out vec4 colorFrag;
 uniform samplerCube tCube;
 uniform float time; 
 //ci sono 4 shader, 0= blinn phong, 1= reflection, 2= fresnel, 3= fresnel con un eta differente
-uniform float current_shader;
+uniform int current_shader;
 
 uniform vec3 cameraPosition;
 uniform mat4 camera; 
@@ -53,7 +53,7 @@ struct Blob
 };
 
 Blob blobs[10];
-uniform vec4 blobsPos[10]; //{blob0,blob1,blob2,blob3,blob4,blob5,blob6,blob7,blob8,blob9};
+uniform vec4 blobsPos[10]; 
 
 
 //-------------------- Gli operatori
@@ -98,7 +98,7 @@ Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size, vec3 color)
 Hit df_plane (vec3 pos, vec3 color)
 {
 	Hit hit;
-    hit.dist = pos.y;
+    hit.dist = 2+pos.y;
     hit.color = color;
 	return hit;
 }
@@ -112,13 +112,7 @@ Hit GetDist(vec3 pos)
     Hit result;
     result.dist = 1e20;
 
-   //operation  
-    
-	for(int i = 0; i < 10; i ++){
-		
-	}
-
-	
+   //operation 
 	Hit sphere0 = df_Sphere(pos, blobs[0].position, blobs[0].size, blobs[0].color);
 	Hit sphere1 = df_Sphere(pos, blobs[1].position, blobs[1].size, blobs[1].color);
      
@@ -150,11 +144,11 @@ Hit GetDist(vec3 pos)
 	//-----------------------Fine controllo sui blob
 
 
-  //	Hit planeDist = df_plane (pos, vec3(0.0,0.5,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
+  	Hit planeDist = df_plane (pos, vec3(0.0,0.5,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
 
-    //if (result.dist < planeDist.dist)
+    if (result.dist < planeDist.dist)
         return result;
-    //else return planeDist;
+    else return planeDist;
 }
 //---------------------------- Funzione per fare il raymarching 
 RM RayMarch(vec3 ray_origin, vec3 ray_direction)
@@ -193,7 +187,7 @@ vec3 GetNormal(vec3 point)
 vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, vec3 typeColor)
 {
 	vec3 lightPosition = vec3 (0,6,0);
-	//lightPosition.xz += vec2(sin(time)*2., cos(time)*2.);
+	lightPosition.xz += vec2(sin(time)*2., cos(time)*2.);
 	vec3 light = normalize (lightPosition - surfacePoint);
 	vec3 normal = GetNormal(surfacePoint);
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
@@ -297,7 +291,7 @@ vec3 getForward(mat4 camera){
 
 vec3 getDirection(vec2 uv, vec3 position, vec3 right, vec3 up, vec3 forward, vec3 dest, float value){
 	vec3 f = normalize(dest - position); 
-	vec3 r = normalize (cross ( vec3(0.0,1.0,0.0),f));	//AIUTO: PERCHè SE INVERTO UP E FORWARD SI RIBALTA TUTTO? Sulle slide era questo il lookAt
+	vec3 r = normalize (cross ( f,vec3(0.0,1.0,0.0)));	
 	vec3 u = normalize(cross(r,f)); 
 	
 	vec3 c = position + f * value; 
@@ -309,11 +303,11 @@ vec3 getDirection(vec2 uv, vec3 position, vec3 right, vec3 up, vec3 forward, vec
 void main()
 {
     //normalizzo la finestra in uno spazio da 1 a -1 e -0.5 per mettere al centro il riferimento (0.0)
-	//vec2 uv = vec2(fragCoord.xy * resolution.xy)/resolution.y; 
-	//vec2 uv =( -1.0 + 2.0*(fragCoord.xy/resolution.xy)) * vec2(resolution.x/resolution.y); 
-	  vec2 uv = vec2(gl_FragCoord.x / resolution.x, gl_FragCoord.y/resolution.y) -0.5;	//AIUTO: VIENE SCHIACCIATO
-
-	  vec4 col = vec4(0.0);
+	vec2 uv = gl_FragCoord.xy/resolution.xy; 
+	uv -= 0.5;
+	uv.x *= resolution.x/resolution.y; 
+	
+	vec4 col = vec4(0.0);
 
 	for (int i = 0; i < 10; i++)
     {

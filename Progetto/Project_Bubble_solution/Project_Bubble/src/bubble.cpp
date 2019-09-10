@@ -273,7 +273,10 @@ int main() {
 
 			glm::mat3 normalMatrix;
 			
-			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
+			
+			if(rayMarchingShader !=0)
+				cout << rayMarchingShader << endl; 
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -399,16 +402,16 @@ int main() {
 
 			if (current_program == 3) {
 				ImGui::Text("RayMarching");	
-				if (ImGui::Button("Blin-Phonn"))                            
+				if (ImGui::Button("Blin-Phonn-"))
 					rayMarchingShader = 0;
 				ImGui::SameLine();
-				if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+				if (ImGui::Button("Reflect-"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
 					rayMarchingShader = 1;
 				ImGui::SameLine();
-				if (ImGui::Button("Fresnel"))
+				if (ImGui::Button("Fresnel-"))
 					rayMarchingShader = 2;
 				ImGui::SameLine();
-				if (ImGui::Button("Bubble"))
+				if (ImGui::Button("Bubble-"))
 					rayMarchingShader = 3;
 			}
 
