@@ -30,12 +30,31 @@ vec2 resolution = vec2(800,600);
 vec4 fragCoord = gl_FragCoord;
 
 //---------------------------------------------------------------------------------------
+//struttura dati che raccoglie le info per una singola bolla
+struct Blob
+{
+	float shape;//sphere, cube, tourus
+	vec3 position;
+    vec3 color;
+    float size;
+	float selected; //bool
+	float operator; //union, substraction, intersection
+};
+
+Blob blobs[10];
+uniform vec4 blobsPos[10]; 
+
+uniform vec4 info1[10];
+uniform vec2 info2[10];
+
 //struttura dati che raccoglie informazioni sul punto colpito
 struct Hit
 {
 	float dist;
     vec3 color;
     vec3 hitPos;
+	bool subject; 
+	float selected; 
 };
 
 //struttura dati che restituisce la distanza percorsa e cosa è stato colpito (mi serve per il colore principalmente)
@@ -43,18 +62,6 @@ struct RM{
     Hit hit;
     float travel;
 };
-
-//struttura dati che raccoglie le info per una singola bolla
-struct Blob
-{
-	vec3 position;
-    vec3 color;
-    float size;
-};
-
-Blob blobs[10];
-uniform vec4 blobsPos[10]; 
-
 
 //-------------------- Gli operatori
 float SmoothUnion( float d1, float d2, float k ) {
@@ -92,12 +99,14 @@ Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size, vec3 color)
     Hit hit;
     hit.dist = d;
     hit.color = color;
+	hit.subject = true; 
 	return hit;
 }
 
 Hit df_plane (vec3 pos, vec3 color)
 {
 	Hit hit;
+	hit.subject = false; 
     hit.dist = 2+pos.y;
     hit.color = color;
 	return hit;
@@ -114,12 +123,13 @@ Hit GetDist(vec3 pos)
 
    //operation 
 	Hit sphere0 = df_Sphere(pos, blobs[0].position, blobs[0].size, blobs[0].color);
+	sphere0.selected = blobs[0].selected;
 	Hit sphere1 = df_Sphere(pos, blobs[1].position, blobs[1].size, blobs[1].color);
-     
+    
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
-   	//float op = Intersection(sphere0.dist, sphere1.dist);
+   	float op = Intersection(sphere0.dist, sphere1.dist);
     //float op = Subtraction(sphere0.dist, sphere1.dist);
-    float op = Union(sphere0.dist, sphere1.dist);
+    //float op = Union(sphere0.dist, sphere1.dist);
 
     if (op < result.dist)
     {
@@ -184,18 +194,34 @@ vec3 GetNormal(vec3 point)
     return normalize (normal);
   }
 
-vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, vec3 typeColor)
+float RampCoeff(float t, float stripes)
 {
-	vec3 lightPosition = vec3 (0,6,0);
-	lightPosition.xz += vec2(sin(time)*2., cos(time)*2.);
+	float modifiedT = mod(floor (t*stripes), stripes); 
+	float coeff = mix (0.1, 1.0, modifiedT /(stripes-1.0));
+	return coeff; 
+}
+
+float SoftShadow(vec3 surfacePosition, vec3 normal, vec3 lightPosition)
+{
+	vec3 rayDirection = normalize(-vec3(lightPosition - surfacePosition)); 
+
+
+return 0.0;
+}
+
+vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
+{
+	vec3 lightPosition = vec3 (0,5,0);
+	lightPosition.xz += vec2(sin(time)*4., cos(time)*4.);
 	vec3 light = normalize (lightPosition - surfacePoint);
 	vec3 normal = GetNormal(surfacePoint);
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
-
+	vec3 toCamera = normalize(cameraPosition - surfacePoint); 
+		
 	//blinphong
 	if(current_shader == 0){
 			float diffuse = clamp(dot(normal, light),0.0,1.0); //faccio il clamp in modo da non aver un valore negativo
-			vec3 diffuseColor = diffuse * typeColor;
+			vec3 diffuseColor = diffuse * target.color;
 
 			vec3 reflectedLight = normalize(reflect(-light, normal));
 			float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
@@ -242,10 +268,33 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, vec3 typeColor)
 		finalColor = mix(refractedColor, reflectedColor, clamp (Ratio, 0.0,1.0));
     }
 
+	//stripes color
+	if(current_shader == 4) {
+		float diffuse = clamp(dot(normal, light), 0.0,1.0);
+		diffuse = RampCoeff(diffuse, 4);
+		vec3 diffuseColor = diffuse * target.color;
+
+		vec3 reflectedLight = normalize (reflect(-light, normal));
+		
+		float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0), 10.);
+		specular = RampCoeff(specular, 4);
+		specular = min (diffuse, specular); 
+		vec3 specularColor = specular * vec3(1.0);
+
+		finalColor = vec4(diffuseColor + specularColor,1.0); 		
+	}
+
 		float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
 		if (hit < length(surfacePoint-lightPosition))
-		finalColor *= 0.3;
-
+		finalColor *= 0.4;
+		
+		if (target.subject && target.selected==1){
+			float border = dot(toCamera, normal); 
+			if(border > -0.3 && border <0.3)
+				finalColor = vec4(1.0);
+		}
+		
+		
 		return finalColor;
 }
 
@@ -289,7 +338,7 @@ vec3 getForward(mat4 camera){
 	//return vec3(0.0,0.0,1.0);
 }
 
-vec3 getDirection(vec2 uv, vec3 position, vec3 right, vec3 up, vec3 forward, vec3 dest, float value){
+vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
 	vec3 f = normalize(dest - position); 
 	vec3 r = normalize (cross ( f,vec3(0.0,1.0,0.0)));	
 	vec3 u = normalize(cross(r,f)); 
@@ -313,15 +362,19 @@ void main()
     {
         blobs[i].position = blobsPos[i].xyz;
 		blobs[i].size = blobsPos[i].w;
-		blobs[i].color = vec3(float(i)*0.2,float(i)*0.2,float(i)*0.9);
-       // float m = mod(float(i),2.);
+		blobs[i].color = info1[i].xyz;
+		blobs[i].selected = info1[i].w;
+		blobs[i].shape = info2[i].x;
+		blobs[i].operator = info2[i].y;
+       
+	   // float m = mod(float(i),2.);
        // blobs[i].position.xz += vec2(sin(time)*(1.-m), cos(time)*(1.-m));
     }
 
-    vec3 ray_origin = getPosition(camera); 
+    vec3 ray_origin = vec3(0.0,0.0,0.0) +getPosition(camera);
 
     //vec3 ray_direction = normalize(vec3(uv.x, uv.y,1));
-	vec3 ray_direction = getDirection(uv, ray_origin, getRight(camera), getUp(camera), getForward(camera), vec3(0.0,0.0,0.0), 0.7); 
+	vec3 ray_direction = getDirection(uv, ray_origin, vec3(0.0,0.0,-5.), 0.7); 
 	
     RM raymarch = RayMarch(ray_origin, ray_direction);
 
@@ -329,7 +382,7 @@ void main()
 		{
     		vec3 point = ray_origin + ray_direction * raymarch.travel;
 
-    		col = GetLight (point, ray_origin, raymarch.hit.color);
+    		col = GetLight (point, ray_origin, raymarch.hit);
 		}
 		else col = Background(uv);
 

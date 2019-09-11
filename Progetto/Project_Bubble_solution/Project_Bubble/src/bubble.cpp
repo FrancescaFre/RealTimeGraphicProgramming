@@ -58,7 +58,7 @@ extern "C"
 	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 }
 // dimensions of application's window
-GLuint screenWidth = 800, screenHeight = 600;
+GLuint screenWidth = 800, screenHeight = 800;
 
 // callback functions for keyboard and mouse events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -101,9 +101,9 @@ GLfloat mFresnelPower = 5;
 GLuint textureCube;
 
 // SHADERS
-enum available_ShaderPrograms { REFLECTION, FRESNEL, BUBBLE, RAYMARCHING};
-const char* print_available_ShaderPrograms[] = { "REFLECTION", "FRESNEL", "BUBBLE", "RAYMARCHING"};
-GLuint current_program = REFLECTION;
+enum available_ShaderPrograms { BUBBLE, RAYMARCHING};
+const char* print_available_ShaderPrograms[] = {"BUBBLE", "RAYMARCHING"};
+GLuint current_program = RAYMARCHING;
 vector<Shader> shaders;
 
 
@@ -113,14 +113,19 @@ const char* print_available_Models[] = { "CUBE", "SPHERE", "BUNNY" };
 
 struct object_on_scene {
 	int shape; 
+	float scale = 1.0;
 	glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f); 
+	bool select = false;
+	glm::vec3 color; 
+	int op; 
+
 	bool isMoving = false; 
 	glm::vec3 movement = glm::vec3(0.1f, 1.0f, 1.1f);
-	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	bool spinning = false; 
 	float orientationY = 0.0f;
 	bool wireframe = false;
 	bool metashape = true; 
+	
 };
 vector<object_on_scene> scene; 
 
@@ -245,18 +250,6 @@ int main() {
 		glUniform1i(textureLocation, 0);
 		glUniform3fv(cameraLocation, 1, glm::value_ptr(camera.Position));
 
-		if (current_program == FRESNEL)
-		{
-			// si trovano i puntatori alle uniform nello shader
-			GLint etaLocation = glGetUniformLocation(shaders[current_program].Program, "Eta");
-			GLint powerLocation = glGetUniformLocation(shaders[current_program].Program, "mFresnelPower");
-			GLint pointLightLocation = glGetUniformLocation(shaders[current_program].Program, "pointLightPosition");
-
-			// si assegnano i dati alle uniform
-			glUniform1f(etaLocation, Eta);
-			glUniform1f(powerLocation, mFresnelPower);
-			glUniform3fv(pointLightLocation, 1, glm::value_ptr(lightPos0));
-		}
 		//si cercano i puntatori delle uniform della projectione e della view, poi ci si assegnano i valori
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
@@ -267,16 +260,13 @@ int main() {
 		if (current_program == RAYMARCHING) {
 			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "time"), currentFrame);
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "camera"), 1, GL_FALSE, glm::value_ptr(camera.GetViewMatrix()));
-
+			
 			glm::mat4 modelMatrix;
 			modelMatrix = glm::scale(modelMatrix, glm::vec3(10.));
 
 			glm::mat3 normalMatrix;
 			
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
-			
-			if(rayMarchingShader !=0)
-				cout << rayMarchingShader << endl; 
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -284,6 +274,9 @@ int main() {
 
 
 			glm::vec4 blob = glm::vec4(0.0);
+			glm::vec4 info1 = glm::vec4(0.0);
+			glm::vec2 info2 = glm::vec2(0.0);
+			bool s = false; 
 			for (int i = 0; i < 10; i++)
 			{
 				float m = i % 4; 
@@ -291,13 +284,28 @@ int main() {
 					glm::vec3 newPosition = scene[i].position; 
 					newPosition.x += sin(currentFrame) * (m);
 					newPosition.y += cos(currentFrame) * (1-m);
-
-					blob = glm::vec4(newPosition, scene[i].scale.x);
+					//posizione + size
+					blob = glm::vec4(newPosition, scene[i].scale);
+					//colore + select
+					info1 =glm::vec4(scene[i].color, scene[i].select );
+					//forma + operatore
+					info2 = glm::vec2(scene[i].shape, scene[i].op );
+					
 				}
 				string nameVar = "blobsPos[" + std::to_string(i)+"]";
-				
 				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
-				//cout << "nome variabile " << nameVar << "\nvalore inserito " << blob[0] << "." << blob[1] << "." << blob[2] << " scale " << blob[3] << endl;
+				
+				nameVar = "info1[" + std::to_string(i) + "]";
+				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(info1));
+
+				nameVar = "info2[" + std::to_string(i) + "]";
+				glUniform2fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(info2));
+				
+				if(s)
+					glUniform1i(glGetUniformLocation(shaders[current_program].Program, "select"), 1);
+				else
+					glUniform1i(glGetUniformLocation(shaders[current_program].Program, "select"), 0);
+
 			}
 
 			cubeModel.Draw(shaders[current_program]);
@@ -324,7 +332,7 @@ int main() {
 
 				modelMatrix = glm::translate(modelMatrix, translate);
 				modelMatrix = glm::rotate(modelMatrix, glm::radians(scene[i].orientationY), glm::vec3(0.0f, 1.0f, 0.0f));
-				modelMatrix = glm::scale(modelMatrix, glm::vec3(scene[i].scale.x, scene[i].scale.y, scene[i].scale.z));
+				modelMatrix = glm::scale(modelMatrix, glm::vec3(scene[i].scale));
 
 				normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 				glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -375,44 +383,32 @@ int main() {
 		//begin of main gui
 		ImGui::Begin("Main GUI");
 		{
-			if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+			if (ImGui::Button("Bubble"))
 				current_program = 0;
 			ImGui::SameLine();
-			if (ImGui::Button("Fresnel")) 
-				current_program = 1;
-			ImGui::SameLine();
-			if (ImGui::Button("Bubble"))
-				current_program = 2;
-			ImGui::SameLine();
 			if (ImGui::Button("RayMarching"))
-				current_program = 3;
+				current_program = 1;
 
 			//-------------------------
-
-			if (current_program == 0) 
-				ImGui::Text("Reflect");
-
-			if (current_program == 1) {
-				ImGui::Text("Fresnel");                           // Display some text (you can use a format string too)
-				ImGui::SliderFloat("Eta", &Eta, -1.0f, 2.0f);  // Edit 1 float using a slider from 0.0f to 1.0f   
-				ImGui::SliderFloat("FresnelPower", &mFresnelPower, -10.0f, 10.0f);
-			}
-			if (current_program == 2)
+			if (current_program == 0)
 				ImGui::Text("Bubble");
 
-			if (current_program == 3) {
+			if (current_program == 1) {
 				ImGui::Text("RayMarching");	
-				if (ImGui::Button("Blin-Phonn-"))
+				if (ImGui::Button("Blin-Phonn"))
 					rayMarchingShader = 0;
 				ImGui::SameLine();
-				if (ImGui::Button("Reflect-"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+				if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
 					rayMarchingShader = 1;
 				ImGui::SameLine();
-				if (ImGui::Button("Fresnel-"))
+				if (ImGui::Button("Fresnel"))
 					rayMarchingShader = 2;
 				ImGui::SameLine();
-				if (ImGui::Button("Bubble-"))
+				if (ImGui::Button("Bubble2"))
 					rayMarchingShader = 3;
+				ImGui::SameLine();
+				if (ImGui::Button("Stripes"))
+					rayMarchingShader = 4;
 			}
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
@@ -463,13 +459,6 @@ int main() {
 				std::cout << "-------------" << endl;
 
 				PrintCurrentShader(current_program); 
-				std::cout << "Eta value " << Eta << endl;
-				std::cout << "FresnelPower value " << mFresnelPower << endl;
-				
-
-				std::cout << "-------------" << endl;
-
-
 			}
 		
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
@@ -486,8 +475,8 @@ int main() {
 			ImGui::Begin(label.c_str());
 
 			ImGui::Text("Shape");
-			ImGui::Combo("Shape", &scene[i].shape, "Cube\0Sphere\0Bunny");
-			//scene[i].shape = available_models(choose);
+			ImGui::Combo("Shape", &scene[i].shape, "Sphere\0Cube\0Torus");
+			
 
 			ImGui::Checkbox("Moving", &scene[i].isMoving);
 			if (scene[i].isMoving && ImGui::CollapsingHeader("Change movement"))
@@ -497,22 +486,30 @@ int main() {
 				ImGui::SliderFloat("z", &scene[i].movement.z, -5.0f, 5.0f);
 			}
 			if (ImGui::CollapsingHeader("Scale & position")) {
+				ImGui::Text("\nScale");
+				ImGui::SliderFloat("Scale", &scene[i].scale, 0.0f, 5.0f);
+
 				ImGui::Text("\nPosition");
 				ImGui::SliderFloat("x", &scene[i].position.x, -5.0f, 5.0f);
 				ImGui::SliderFloat("y", &scene[i].position.y, -5.0f, 5.0f);
 				ImGui::SliderFloat("z", &scene[i].position.z, -5.0f, 5.0f);
-
-				ImGui::Text("\nScale");
-				ImGui::SliderFloat("Scale", &scene[i].scale.x, 0.0f, 5.0f);
-				scene[i].scale.y = scene[i].scale.x;
-				scene[i].scale.z = scene[i].scale.x;
 			}
+
+			ImGui::Checkbox("Select", &scene[i].select);
+			ImGui::Text("Color:");
+			static ImVec4 color = ImColor(114, 144, 154, 200);
+			int misc_flags = (ImGuiColorEditFlags_NoOptions);
+
+			ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
+			scene[i].color.x = color.x;
+			scene[i].color.y = color.y;
+			scene[i].color.z = color.z;
+
+			ImGui::Combo("Operation", &scene[i].op, "Union\0Subtraction\0Intersection");
 
 			ImGui::Checkbox("Spinning", &scene[i].spinning);
 			ImGui::Checkbox("Wireframe", &scene[i].wireframe);
-
-			ImGui::Checkbox("Positive Metashape", &scene[i].metashape);
-
+			
 			if (ImGui::Button("Delete Model"))
 				toRemove.push_back(i);
 			
@@ -619,14 +616,10 @@ void SetupShaders()
 {
 
 	// we create the Shader Programs (code in shader_v1.h)
-	Shader shader1("src/shaders/reflect.vert", "src/shaders/reflect.frag");
+	Shader shader0("src/shaders/reflect.vert", "src/shaders/bubble.frag");
+	shaders.push_back(shader0);
+	Shader shader1("src/shaders/reflect.vert", "src/shaders/rayMarching.frag");
 	shaders.push_back(shader1);
-	Shader shader2("src/shaders/reflect.vert", "src/shaders/fresnel.frag");
-	shaders.push_back(shader2);
-	Shader shader3("src/shaders/reflect.vert", "src/shaders/bubble.frag");
-	shaders.push_back(shader3);
-	Shader shader4("src/shaders/reflect.vert", "src/shaders/rayMarching.frag");
-	shaders.push_back(shader4);
 }
 
 //////////////////////////////////////////
