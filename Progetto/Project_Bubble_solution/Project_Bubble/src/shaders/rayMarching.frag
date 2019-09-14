@@ -39,13 +39,14 @@ struct Blob
     float size;
 	float selected; //bool
 	float operator; //union, substraction, intersection
+	float spinning; 
 };
 
 Blob blobs[10];
 uniform vec4 blobsPos[10]; 
 
 uniform vec4 info1[10];
-uniform vec2 info2[10];
+uniform vec3 info2[10];
 
 //struttura dati che raccoglie informazioni sul punto colpito
 struct Hit
@@ -91,6 +92,7 @@ float Intersection (float obj1, float obj2)
   	return max(obj1, obj2);  
    }
 
+
 //---------------------------------------------------------Funzioni che calcolano la distanza
 Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size, vec3 color)
 {
@@ -103,63 +105,99 @@ Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size, vec3 color)
 	return hit;
 }
 
-Hit df_plane (vec3 pos, vec3 color)
+Hit df_plane (vec3 rayPos, vec3 color)
 {
 	Hit hit;
 	hit.subject = false; 
-    hit.dist = 2+pos.y;
+    hit.dist = 2+rayPos.y;
     hit.color = color;
 	return hit;
+}
+
+Hit df_Box(vec3 rayPos, vec3 pos, float s, vec3 color )
+{
+  pos = rayPos - pos; 
+  vec3 size = vec3(s); 
+  vec3 d = abs(pos) - size;
+  float dist = length(max(d,0.0))
+         + min(max(d.x,max(d.y,d.z)),0.0); // remove this line for an only partially signed sdf 
+
+  Hit hit; 
+  hit.subject = true; 
+  hit.dist = dist; 
+  hit.color = color; 
+  return hit; 
+}
+
+Hit df_Torus( vec3 rayPos, vec3 pos, float rad, vec3 color) //radius have 2 radius, the main shape and the radius of the border
+{
+	pos = rayPos - pos; 
+	vec2 radius = vec2(rad, rad*0.3); 
+	vec2 q = vec2(length(pos.xz)-radius.x,pos.y);
+	float dist = length(q)-radius.y;
+
+	Hit hit; 
+	hit.subject = true; 
+	hit.dist = dist; 
+	hit.color = color;
+	return hit; 
+}
+//------------
+Hit Minimum (Hit obj1, Hit obj2){
+
+	Hit hit = obj1.dist<obj2.dist ? obj1 : obj2;
+	return hit; 
+}
+Hit ShapeDistance(vec3 rayPos, Blob blobs){
+
+	if(blobs.shape == 0)
+		return df_Sphere(rayPos, blobs.position, blobs.size, blobs.color);
+	if(blobs.shape == 1)
+		return df_Box(rayPos, blobs.position, blobs.size, blobs.color);
+	if(blobs.shape == 2)
+		return df_Torus(rayPos, blobs.position, blobs.size, blobs.color);
 }
 
 Hit GetDist(vec3 pos)
 {
     float obj;
-
 	vec4 sphere_center = vec4(0,1,6,1);
 
     Hit result;
-    result.dist = 1e20;
+    result.dist = 1e20; 
 
    //operation 
-	Hit sphere0 = df_Sphere(pos, blobs[0].position, blobs[0].size, blobs[0].color);
-	sphere0.selected = blobs[0].selected;
-	Hit sphere1 = df_Sphere(pos, blobs[1].position, blobs[1].size, blobs[1].color);
-    
+	Hit sphere0 = ShapeDistance(pos, blobs[0]);
+	
+	result = sphere0;
+
+	Hit cube = df_Box(pos, blobs[1].position, blobs[1].size, blobs[1].color);
+	cube.selected = blobs[1].selected;
+	result = Minimum(result, cube); 
+
+	Hit torus = df_Torus(pos, blobs[2].position, blobs[2].size, blobs[2].color);
+	torus.selected = blobs[2].selected;
+	result = Minimum(result, torus); 
+
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
-   	float op = Intersection(sphere0.dist, sphere1.dist);
+   	//float op = Intersection(sphere0.dist, sphere1.dist);
     //float op = Subtraction(sphere0.dist, sphere1.dist);
     //float op = Union(sphere0.dist, sphere1.dist);
 
-    if (op < result.dist)
-    {
-        sphere1.dist = op;
-        result = sphere1;
-    }
-    
    //operation smooth
-  	Hit sphere2 = df_Sphere(pos, blobs[2].position, blobs[2].size, blobs[2].color);
-   	Hit sphere3 = df_Sphere(pos, blobs[3].position, blobs[3].size, blobs[3].color);
-
+  
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
     //float ops = SmoothIntersection(sphere2.dist, sphere3.dist, 0.2);
     //float ops = SmoothSubtraction(sphere2.dist, sphere3.dist,0.2);
-    float ops = SmoothUnion(sphere2.dist, sphere3.dist, 0.2);
+    
 
-    if (ops < result.dist)
-	{
-        sphere3.dist = ops;
-        result = sphere3;
-    }
-	//-----------------------Fine controllo sui blob
+   //-----------------------Fine controllo sui blob
+  	Hit planeDist = df_plane (pos, vec3(0.0,0.4,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
 
 
-  	Hit planeDist = df_plane (pos, vec3(0.0,0.5,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
-
-    if (result.dist < planeDist.dist)
-        return result;
-    else return planeDist;
+    return Minimum(result, planeDist);
 }
+
 //---------------------------- Funzione per fare il raymarching 
 RM RayMarch(vec3 ray_origin, vec3 ray_direction)
 {
@@ -288,7 +326,8 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 		if (hit < length(surfacePoint-lightPosition))
 		finalColor *= 0.4;
 		
-		if (target.subject && target.selected==1){
+
+		if (target.subject && target.selected == 1.0){
 			float border = dot(toCamera, normal); 
 			if(border > -0.3 && border <0.3)
 				finalColor = vec4(1.0);
@@ -366,6 +405,7 @@ void main()
 		blobs[i].selected = info1[i].w;
 		blobs[i].shape = info2[i].x;
 		blobs[i].operator = info2[i].y;
+		blobs[i].spinning = info2[i].z;
        
 	   // float m = mod(float(i),2.);
        // blobs[i].position.xz += vec2(sin(time)*(1.-m), cos(time)*(1.-m));
@@ -385,6 +425,8 @@ void main()
     		col = GetLight (point, ray_origin, raymarch.hit);
 		}
 		else col = Background(uv);
+
+		//if(blobs[2].selected == 1)  col = vec4(1.0); 
 
     colorFrag = col;
 }

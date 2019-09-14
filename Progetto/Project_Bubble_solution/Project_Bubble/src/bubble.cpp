@@ -273,25 +273,31 @@ int main() {
 			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
 
-			glm::vec4 blob = glm::vec4(0.0);
-			glm::vec4 info1 = glm::vec4(0.0);
-			glm::vec2 info2 = glm::vec2(0.0);
+			glm::vec4 blob;
+			glm::vec4 info1;
+			glm::vec2 info2;
 			bool s = false; 
 			for (int i = 0; i < 10; i++)
 			{
+
+				blob = glm::vec4(0.0);
+				info1 = glm::vec4(0.0);
+				info2 = glm::vec3(0.0);
+				s = false;
+
 				float m = i % 4; 
 				if (i < scene.size()) {
 					glm::vec3 newPosition = scene[i].position; 
-					newPosition.x += sin(currentFrame) * (m);
-					newPosition.y += cos(currentFrame) * (1-m);
+					if (scene[i].isMoving) 
+						newPosition = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z));
 					//posizione + size
 					blob = glm::vec4(newPosition, scene[i].scale);
 					//colore + select
 					info1 =glm::vec4(scene[i].color, scene[i].select );
 					//forma + operatore
-					info2 = glm::vec2(scene[i].shape, scene[i].op );
-					
+					info2 = glm::vec3(scene[i].shape, scene[i].op, scene[i].spinning);
 				}
+				
 				string nameVar = "blobsPos[" + std::to_string(i)+"]";
 				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(blob));
 				
@@ -299,12 +305,8 @@ int main() {
 				glUniform4fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(info1));
 
 				nameVar = "info2[" + std::to_string(i) + "]";
-				glUniform2fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(info2));
+				glUniform3fv(glGetUniformLocation(shaders[current_program].Program, nameVar.c_str()), 1, glm::value_ptr(info2));
 				
-				if(s)
-					glUniform1i(glGetUniformLocation(shaders[current_program].Program, "select"), 1);
-				else
-					glUniform1i(glGetUniformLocation(shaders[current_program].Program, "select"), 0);
 
 			}
 
@@ -468,7 +470,8 @@ int main() {
 		int choose;
 		vector <int> toRemove;
 		string label;
-
+		//static ImVec4 color = ImColor(114, 144, 154, 200);
+		glm::vec4 color = glm::vec4(1.0);
 		//gui for each object
 		for (int i = 0; i < scene.size(); i++) {
 			label = "Object GUI - " + std::to_string(i);
@@ -497,9 +500,10 @@ int main() {
 
 			ImGui::Checkbox("Select", &scene[i].select);
 			ImGui::Text("Color:");
-			static ImVec4 color = ImColor(114, 144, 154, 200);
+		
 			int misc_flags = (ImGuiColorEditFlags_NoOptions);
 
+			color = glm::vec4(scene[i].color, 1.0); 
 			ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
 			scene[i].color.x = color.x;
 			scene[i].color.y = color.y;
