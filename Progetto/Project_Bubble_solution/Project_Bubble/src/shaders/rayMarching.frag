@@ -26,7 +26,7 @@ uniform int current_shader;
 uniform vec3 cameraPosition;
 uniform mat4 camera; 
 
-vec2 resolution = vec2(800,600);
+vec2 resolution = vec2(800,800);
 vec4 fragCoord = gl_FragCoord;
 
 //---------------------------------------------------------------------------------------
@@ -67,7 +67,8 @@ struct RM{
 //-------------------- Gli operatori
 float SmoothUnion( float d1, float d2, float k ) {
     float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
-    return mix( d2, d1, h ) - k*h*(1.0-h); }
+	return mix( d2, d1, h ) - k*h*(1.0-h); 
+}
 
 float Union (float obj1, float obj2) 
 {
@@ -94,27 +95,25 @@ float Intersection (float obj1, float obj2)
 
 
 //---------------------------------------------------------Funzioni che calcolano la distanza
-Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size, vec3 color)
+Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size)
 {
 	float d = length(rayPos - spherePos) - size;
 
     Hit hit;
     hit.dist = d;
-    hit.color = color;
 	hit.subject = true; 
 	return hit;
 }
 
-Hit df_plane (vec3 rayPos, vec3 color)
+Hit df_plane (vec3 rayPos)
 {
 	Hit hit;
 	hit.subject = false; 
     hit.dist = 2+rayPos.y;
-    hit.color = color;
 	return hit;
 }
 
-Hit df_Box(vec3 rayPos, vec3 pos, float s, vec3 color )
+Hit df_Box(vec3 rayPos, vec3 pos, float s )
 {
   pos = rayPos - pos; 
   vec3 size = vec3(s); 
@@ -125,11 +124,10 @@ Hit df_Box(vec3 rayPos, vec3 pos, float s, vec3 color )
   Hit hit; 
   hit.subject = true; 
   hit.dist = dist; 
-  hit.color = color; 
   return hit; 
 }
 
-Hit df_Torus( vec3 rayPos, vec3 pos, float rad, vec3 color) //radius have 2 radius, the main shape and the radius of the border
+Hit df_Torus( vec3 rayPos, vec3 pos, float rad) //radius have 2 radius, the main shape and the radius of the border
 {
 	pos = rayPos - pos; 
 	vec2 radius = vec2(rad, rad*0.3); 
@@ -139,23 +137,26 @@ Hit df_Torus( vec3 rayPos, vec3 pos, float rad, vec3 color) //radius have 2 radi
 	Hit hit; 
 	hit.subject = true; 
 	hit.dist = dist; 
-	hit.color = color;
 	return hit; 
 }
 //------------
-Hit Minimum (Hit obj1, Hit obj2){
 
-	Hit hit = obj1.dist<obj2.dist ? obj1 : obj2;
-	return hit; 
-}
 Hit ShapeDistance(vec3 rayPos, Blob blobs){
 
 	if(blobs.shape == 0)
-		return df_Sphere(rayPos, blobs.position, blobs.size, blobs.color);
+		return df_Sphere(rayPos, blobs.position, blobs.size);
 	if(blobs.shape == 1)
-		return df_Box(rayPos, blobs.position, blobs.size, blobs.color);
+		return df_Box(rayPos, blobs.position, blobs.size);
 	if(blobs.shape == 2)
-		return df_Torus(rayPos, blobs.position, blobs.size, blobs.color);
+		return df_Torus(rayPos, blobs.position, blobs.size);
+}
+
+vec3 GetColor(vec3 rayPos){ 
+	vec3 color = max(0.0, 1.0 -df_plane(rayPos).dist) * vec3(0.0,0.4,0.0)*1.0 ; 
+	for (int i = 0; i<10; i++)
+		color += max(0.0 , 1.0 -ShapeDistance(rayPos, blobs[i]).dist) *blobs[i].color*1.0; 
+
+	return color;
 }
 
 Hit GetDist(vec3 pos)
@@ -166,36 +167,25 @@ Hit GetDist(vec3 pos)
     Hit result;
     result.dist = 1e20; 
 
+	Hit planeDist = df_plane (pos); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
+	result = planeDist; 
    //operation 
-	Hit sphere0 = ShapeDistance(pos, blobs[0]);
-	
-	result = sphere0;
-
-	Hit cube = df_Box(pos, blobs[1].position, blobs[1].size, blobs[1].color);
-	cube.selected = blobs[1].selected;
-	result = Minimum(result, cube); 
-
-	Hit torus = df_Torus(pos, blobs[2].position, blobs[2].size, blobs[2].color);
-	torus.selected = blobs[2].selected;
-	result = Minimum(result, torus); 
+	for (int i = 0; i < 10; i++){
+		Hit shape = ShapeDistance(pos, blobs[i]);
+		result.dist = SmoothUnion(result.dist, shape.dist, 0.5); 
+	}
 
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
    	//float op = Intersection(sphere0.dist, sphere1.dist);
     //float op = Subtraction(sphere0.dist, sphere1.dist);
     //float op = Union(sphere0.dist, sphere1.dist);
-
-   //operation smooth
   
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
     //float ops = SmoothIntersection(sphere2.dist, sphere3.dist, 0.2);
     //float ops = SmoothSubtraction(sphere2.dist, sphere3.dist,0.2);
-    
-
-   //-----------------------Fine controllo sui blob
-  	Hit planeDist = df_plane (pos, vec3(0.0,0.4,0.0)); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
-
-
-    return Minimum(result, planeDist);
+ 
+	result.color = GetColor(pos); 
+    return result; 
 }
 
 //---------------------------- Funzione per fare il raymarching 
@@ -212,6 +202,7 @@ RM RayMarch(vec3 ray_origin, vec3 ray_direction)
 
         if (travel > MAX_DIST || hit.dist < PRECISION) break;
     }
+	
     RM result;
     result.travel = travel;
     result.hit = hit;
@@ -250,7 +241,7 @@ return 0.0;
 vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 {
 	vec3 lightPosition = vec3 (0,5,0);
-	lightPosition.xz += vec2(sin(time)*4., cos(time)*4.);
+	//lightPosition.xz += vec2(sin(time*0.5)*4., cos(time*0.5)*4.);
 	vec3 light = normalize (lightPosition - surfacePoint);
 	vec3 normal = GetNormal(surfacePoint);
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
@@ -274,7 +265,7 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 	if(current_shader == 1){
         vec3 V = normalize(surfacePoint - cameraPosition);
         vec3 R = reflect(V, normal);
-		finalColor = texture (tCube, R);		  
+		finalColor = texture (tCube, R);
 	}
 
 	//fresnel
@@ -351,30 +342,11 @@ vec3 BackGroundGradient( vec2 uv )
 }
 
 //--------------------------------------------------------------------------------
-vec4 Background( vec2 uv )
+//vec4 Background( vec2 uv )
+vec4 Background(vec3 dir) 
 {
-   vec4 color = texture(tCube, vec3(uv,1.0)); //BackGroundGradient(uv); 
-   return color;
-}
-//AIUTO: COME SI INTERPRETA UNA MAT4X4?
-vec3 getPosition (mat4 camera){
-	return vec3(camera[3][0],camera[3][1],camera[3][2]);
-	//return vec3(0.0,1.0,6.0);
-}
-
-vec3 getRight(mat4 camera){
-	return vec3(camera[0][0],camera[0][1],camera[0][2]);
-	//return vec3(1.0,0.0,0.0);
-}
-
-vec3 getUp(mat4 camera){
-	return vec3(camera[1][0],camera[1][1],camera[1][2]);
-	//return vec3(0.0,1.0,0.0);
-}
-
-vec3 getForward(mat4 camera){
-	return vec3(camera[2][0],camera[2][1],camera[2][2]);
-	//return vec3(0.0,0.0,1.0);
+	//BackGroundGradient(uv); 
+   return texture (tCube, dir);
 }
 
 vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
@@ -382,9 +354,15 @@ vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
 	vec3 r = normalize (cross ( f,vec3(0.0,1.0,0.0)));	
 	vec3 u = normalize(cross(r,f)); 
 	
-	vec3 c = position + f * value; 
-	vec3 i = c + uv.x*r + uv.y*u;
-	return normalize (i-position);  
+	vec3 i = uv.x*r + uv.y*u + value*f;
+	
+	return normalize(i); 
+}
+
+mat2 Rotation(float a) {
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
 }
 
 //------------------------------------------------------- MAIN
@@ -406,17 +384,15 @@ void main()
 		blobs[i].shape = info2[i].x;
 		blobs[i].operator = info2[i].y;
 		blobs[i].spinning = info2[i].z;
-       
-	   // float m = mod(float(i),2.);
-       // blobs[i].position.xz += vec2(sin(time)*(1.-m), cos(time)*(1.-m));
     }
 
-    vec3 ray_origin = vec3(0.0,0.0,0.0) +getPosition(camera);
-
-    //vec3 ray_direction = normalize(vec3(uv.x, uv.y,1));
-	vec3 ray_direction = getDirection(uv, ray_origin, vec3(0.0,0.0,-5.), 0.7); 
+	vec3 ray_origin = vec3(0.0f, 10.0f, -30.0f) + (5.0*sin(0.3*time),0.0,-5.0*cos(0.3*time));
+  
+	ray_origin.xz *= Rotation(0.5*time);
 	
-    RM raymarch = RayMarch(ray_origin, ray_direction);
+	vec3 ray_direction = getDirection(uv, ray_origin, vec3(0.0,1.0,0.0), 2); 
+	
+	RM raymarch = RayMarch(ray_origin, ray_direction);
 
 		if (raymarch.hit.dist < PRECISION)
 		{
@@ -424,7 +400,7 @@ void main()
 
     		col = GetLight (point, ray_origin, raymarch.hit);
 		}
-		else col = Background(uv);
+		else col = Background(ray_direction);
 
 		//if(blobs[2].selected == 1)  col = vec4(1.0); 
 
