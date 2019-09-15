@@ -22,11 +22,12 @@ uniform samplerCube tCube;
 uniform float time; 
 //ci sono 4 shader, 0= blinn phong, 1= reflection, 2= fresnel, 3= fresnel con un eta differente
 uniform int current_shader;
+uniform int camMov; 
 
 uniform vec3 cameraPosition;
 uniform mat4 camera; 
 
-vec2 resolution = vec2(800,800);
+uniform vec2 resolution;
 vec4 fragCoord = gl_FragCoord;
 
 //---------------------------------------------------------------------------------------
@@ -95,6 +96,14 @@ float Intersection (float obj1, float obj2)
 
 
 //---------------------------------------------------------Funzioni che calcolano la distanza
+Hit df_plane (vec3 rayPos)
+{
+	Hit hit;
+	hit.subject = false; 
+    hit.dist = 2+rayPos.y;
+	return hit;
+}
+
 Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size)
 {
 	float d = length(rayPos - spherePos) - size;
@@ -102,14 +111,6 @@ Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size)
     Hit hit;
     hit.dist = d;
 	hit.subject = true; 
-	return hit;
-}
-
-Hit df_plane (vec3 rayPos)
-{
-	Hit hit;
-	hit.subject = false; 
-    hit.dist = 2+rayPos.y;
 	return hit;
 }
 
@@ -154,9 +155,20 @@ Hit ShapeDistance(vec3 rayPos, Blob blobs){
 vec3 GetColor(vec3 rayPos){ 
 	vec3 color = max(0.0, 1.0 -df_plane(rayPos).dist) * vec3(0.0,0.4,0.0)*1.0 ; 
 	for (int i = 0; i<10; i++)
-		color += max(0.0 , 1.0 -ShapeDistance(rayPos, blobs[i]).dist) *blobs[i].color*1.0; 
+		if(blobs[i].operator != 1.0)
+			color += max(0.0 , 1.0 -ShapeDistance(rayPos, blobs[i]).dist) *blobs[i].color*1.0; 
 
 	return color;
+}
+
+float GetBorder (vec3 rayPos){
+
+	float border = 0.0;
+	for(int i = 0; i<10; i++)
+		if(ShapeDistance(rayPos, blobs[i]).dist < 0.3 )
+			border += blobs[i].selected; 
+
+	return clamp (border, 0.0,1.0); 
 }
 
 Hit GetDist(vec3 pos)
@@ -170,11 +182,29 @@ Hit GetDist(vec3 pos)
 	Hit planeDist = df_plane (pos); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
 	result = planeDist; 
    //operation 
+   Hit shape;
 	for (int i = 0; i < 10; i++){
-		Hit shape = ShapeDistance(pos, blobs[i]);
-		result.dist = SmoothUnion(result.dist, shape.dist, 0.5); 
+		if(blobs[i].operator == 0){
+			shape = ShapeDistance(pos, blobs[i]);
+			result.dist = SmoothUnion(result.dist, shape.dist, 0.5);
+		}
 	}
 
+	for (int i = 0; i<10; i++)
+	{
+		if(blobs[i].operator == 1){
+			shape = ShapeDistance(pos, blobs[i]);
+			result.dist = SmoothSubtraction( shape.dist,result.dist, 0.5);
+		}
+	}
+
+	for (int i = 0; i<10; i++)
+	{
+		if(blobs[i].operator == 2){
+			shape = ShapeDistance(pos, blobs[i]);
+			result.dist = SmoothIntersection( shape.dist,result.dist, 0.5);
+		}
+	}
     //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
    	//float op = Intersection(sphere0.dist, sphere1.dist);
     //float op = Subtraction(sphere0.dist, sphere1.dist);
@@ -184,7 +214,9 @@ Hit GetDist(vec3 pos)
     //float ops = SmoothIntersection(sphere2.dist, sphere3.dist, 0.2);
     //float ops = SmoothSubtraction(sphere2.dist, sphere3.dist,0.2);
  
+	
 	result.color = GetColor(pos); 
+	result.selected = GetBorder(pos); 
     return result; 
 }
 
@@ -241,7 +273,7 @@ return 0.0;
 vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 {
 	vec3 lightPosition = vec3 (0,5,0);
-	//lightPosition.xz += vec2(sin(time*0.5)*4., cos(time*0.5)*4.);
+	lightPosition.xz += vec2(sin(time*0.5)*4., cos(time*0.5)*4.);
 	vec3 light = normalize (lightPosition - surfacePoint);
 	vec3 normal = GetNormal(surfacePoint);
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
@@ -316,9 +348,8 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 		float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
 		if (hit < length(surfacePoint-lightPosition))
 		finalColor *= 0.4;
-		
 
-		if (target.subject && target.selected == 1.0){
+		if(target.selected==1.0) {
 			float border = dot(toCamera, normal); 
 			if(border > -0.3 && border <0.3)
 				finalColor = vec4(1.0);
@@ -370,10 +401,11 @@ void main()
 {
     //normalizzo la finestra in uno spazio da 1 a -1 e -0.5 per mettere al centro il riferimento (0.0)
 	vec2 uv = gl_FragCoord.xy/resolution.xy; 
+
 	uv -= 0.5;
 	uv.x *= resolution.x/resolution.y; 
-	
-	vec4 col = vec4(0.0);
+	vec4 col; 
+	col = vec4(0.0);
 
 	for (int i = 0; i < 10; i++)
     {
@@ -386,10 +418,12 @@ void main()
 		blobs[i].spinning = info2[i].z;
     }
 
-	vec3 ray_origin = vec3(0.0f, 10.0f, -30.0f) + (5.0*sin(0.3*time),0.0,-5.0*cos(0.3*time));
-  
-	ray_origin.xz *= Rotation(0.5*time);
-	
+	vec3 ray_origin = vec3(0.0,1.0,-30.0);
+	if (camMov == 1){
+		ray_origin = vec3(0.0f, 10.0f, -30.0f) + (5.0*sin(0.3*time),0.0,-5.0*cos(0.3*time));
+		ray_origin.xz *= Rotation(0.5*time);
+	}
+
 	vec3 ray_direction = getDirection(uv, ray_origin, vec3(0.0,1.0,0.0), 2); 
 	
 	RM raymarch = RayMarch(ray_origin, ray_direction);
@@ -402,7 +436,7 @@ void main()
 		}
 		else col = Background(ray_direction);
 
-		//if(blobs[2].selected == 1)  col = vec4(1.0); 
+		if(resolution.x == 800)  col = vec4(1.0); 
 
     colorFrag = col;
 }

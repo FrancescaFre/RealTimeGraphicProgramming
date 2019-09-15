@@ -58,7 +58,7 @@ extern "C"
 	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 }
 // dimensions of application's window
-GLuint screenWidth = 800, screenHeight = 800;
+GLuint screenWidth = 800, screenHeight = 600;
 
 // callback functions for keyboard and mouse events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -117,7 +117,7 @@ struct object_on_scene {
 	glm::vec3 position = glm::vec3(0.0f,0.0f,0.0f); 
 	bool select = false;
 	glm::vec3 color; 
-	int op; 
+	int op = 0; 
 
 	bool isMoving = false; 
 	glm::vec3 movement = glm::vec3(0.1f, 1.0f, 1.1f);
@@ -144,9 +144,9 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 		
-	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Bubble", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Project - 921900", nullptr, nullptr);
 	if (!window)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -265,8 +265,16 @@ int main() {
 			modelMatrix = glm::scale(modelMatrix, glm::vec3(10.));
 
 			glm::mat3 normalMatrix;
-			
+			int width, height;
+			glfwGetWindowSize(window, &width, &height);
+			glm::vec2 resolution = glm::vec2(width, height);
+			cout << height << " " << width << endl; 
+
+			glUniform2fv(glGetUniformLocation(shaders[current_program].Program, "resolution"), 1, glm::value_ptr(resolution));
+
+
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "camMov"), cameraMovement);
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -289,7 +297,7 @@ int main() {
 				if (i < scene.size()) {
 					glm::vec3 newPosition = scene[i].position; 
 					if (scene[i].isMoving) 
-						newPosition = glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z));
+						newPosition += glm::vec3(cos(currentFrame * scene[i].movement.x), cos(currentFrame * scene[i].movement.y), cos(currentFrame * scene[i].movement.z));
 					//posizione + size
 					blob = glm::vec4(newPosition, scene[i].scale);
 					//colore + select
@@ -438,7 +446,34 @@ int main() {
 				if (ImGui::Button("Create object")) {
 					object_on_scene newObject;
 
-					newObject.shape = available_models(choosemodel);
+					newObject.shape = available_models(rand()%3);
+					
+					//----------Position
+					float size = scene.size(); 
+					float x = size;
+					float y = x/2;
+					float z = y/2; 
+					
+					x = int(x) % 2 == 0 ? 1.0 : -1.0;
+					y = (int)y % 2 == 0 ? 1.0 : -1.0;
+					z = (int)z % 2 == 0 ? 1.0 : -1.0;
+
+					if (size > 7) {
+						x = z = 0.0;
+						y = (int)size % 2; 
+					}
+					float k = ((float)rand() / RAND_MAX) + 0.50;
+					newObject.position = glm::vec3(x+k, y+k, z+k);
+					
+					//---------Color
+					newObject.color = glm::vec3((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
+
+					//---------Movement
+					newObject.movement = glm::vec3(rand()%5, rand()%5, rand()%5);
+					newObject.isMoving = rand() % 2; 
+
+					//---------Scale
+					newObject.scale = k;
 					scene.push_back(newObject);
 				}
 			}
@@ -512,8 +547,7 @@ int main() {
 			ImGui::Combo("Operation", &scene[i].op, "Union\0Subtraction\0Intersection");
 
 			ImGui::Checkbox("Spinning", &scene[i].spinning);
-			ImGui::Checkbox("Wireframe", &scene[i].wireframe);
-			
+		
 			if (ImGui::Button("Delete Model"))
 				toRemove.push_back(i);
 			
