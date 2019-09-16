@@ -70,6 +70,7 @@ void SetupShaders();
 void DeleteShaders();
 void PrintCurrentShader(int shader);
 GLint LoadTextureCube(string path);
+GLint LoadTexture(string path);
 void CameraMovement(GLfloat frame);
 
 // keyboard keys
@@ -100,6 +101,8 @@ GLfloat mFresnelPower = 5;
 // CUBE MAP Texture
 GLuint textureCube;
 
+GLuint textureNoise; 
+int textureWidth, textureHeight;
 // SHADERS
 enum available_ShaderPrograms { BUBBLE, RAYMARCHING};
 const char* print_available_ShaderPrograms[] = {"BUBBLE", "RAYMARCHING"};
@@ -132,6 +135,7 @@ vector<object_on_scene> scene;
 int choosemodel=0;
 bool cameraMovement = false; 
 int rayMarchingShader = 0; 
+bool dithering;
 //-------------------------------------------
 //			MAIN							|========================================================
 //-------------------------------------------
@@ -184,7 +188,7 @@ int main() {
 	//Load skybox and skybox's shader
 	Shader skybox_shader("src/shaders/skybox.vert", "src/shaders/skybox.frag");
 	textureCube = LoadTextureCube("src/texture/cube/skybox/");
-
+	textureNoise = LoadTexture("src/texture/noise1.jpg");
 	// LOAD MODELs
 	Model cubeModel("src/models/cube.obj");
 	Model sphereModel("src/models/sphere.obj");
@@ -214,7 +218,11 @@ int main() {
 //				Rendering LOOP 				|========================================================
 //-------------------------------------------
 	while (!glfwWindowShouldClose(window))
+
 	{
+		glfwGetFramebufferSize(window, &width, &height);
+		glViewport(0, 0, width, height);
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
 		// Current Frame and DeltaTime
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -254,6 +262,11 @@ int main() {
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "viewMatrix"), 1, GL_FALSE, glm::value_ptr(view));
 
+		// Noise
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, textureNoise);
+		glUniform1i(glGetUniformLocation(shaders[current_program].Program, "noise"), 1);
+
 		if (current_program == BUBBLE)
 			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"),mFresnelPower);
 		
@@ -268,13 +281,13 @@ int main() {
 			int width, height;
 			glfwGetWindowSize(window, &width, &height);
 			glm::vec2 resolution = glm::vec2(width, height);
-			cout << height << " " << width << endl; 
-
+			glm::vec2  noise_resolution = glm::vec2(textureWidth, textureHeight);
 			glUniform2fv(glGetUniformLocation(shaders[current_program].Program, "resolution"), 1, glm::value_ptr(resolution));
-
+			glUniform2fv(glGetUniformLocation(shaders[current_program].Program, "noise_resolution"), 1, glm::value_ptr(noise_resolution));
 
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "camMov"), cameraMovement);
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "dithering"), dithering);
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -283,7 +296,7 @@ int main() {
 
 			glm::vec4 blob;
 			glm::vec4 info1;
-			glm::vec2 info2;
+			glm::vec3 info2;
 			bool s = false; 
 			for (int i = 0; i < 10; i++)
 			{
@@ -301,7 +314,7 @@ int main() {
 					//posizione + size
 					blob = glm::vec4(newPosition, scene[i].scale);
 					//colore + select
-					info1 =glm::vec4(scene[i].color, scene[i].select );
+					info1 = glm::vec4(scene[i].color, scene[i].select );
 					//forma + operatore
 					info2 = glm::vec3(scene[i].shape, scene[i].op, scene[i].spinning);
 				}
@@ -419,6 +432,9 @@ int main() {
 				ImGui::SameLine();
 				if (ImGui::Button("Stripes"))
 					rayMarchingShader = 4;
+				ImGui::SameLine();
+				
+				ImGui::Checkbox("Dithering", &dithering);
 			}
 
 			if (ImGui::CollapsingHeader("Background Texture")) {
@@ -437,6 +453,25 @@ int main() {
 				if (ImGui::Button("Colored"))
 					textureCube = LoadTextureCube("src/texture/cube/colored/");
 			}
+
+			if (dithering && ImGui::CollapsingHeader("BackGround Noise")) {
+				if (ImGui::Button("Noise-1"))
+					textureNoise = LoadTexture("src/texture/noise1.jpg");
+				ImGui::SameLine();
+				if (ImGui::Button("Noise-2"))
+					textureNoise = LoadTexture("src/texture/noise2.jpg");
+				ImGui::SameLine();
+				if (ImGui::Button("Noise-3"))
+					textureNoise = LoadTexture("src/texture/noise3.jpg");
+				if (ImGui::Button("Noise-4"))
+					textureNoise = LoadTexture("src/texture/noise4.jpg");
+				ImGui::SameLine();
+				if (ImGui::Button("Noise-5"))
+					textureNoise = LoadTexture("src/texture/noise5.jpg");
+				ImGui::SameLine();
+				if (ImGui::Button("Noise-6"))
+					textureNoise = LoadTexture("src/texture/noise6.jpg");
+				}
 
 			ImGui::Text(" ");
 			ImGui::Separator;
@@ -644,6 +679,38 @@ GLint LoadTextureCube(string path)
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return textureImage;
+}
+
+GLint LoadTexture(string path)
+{
+	GLuint textureImage;
+	int w, h, channels;
+	unsigned char* image;
+	image = stbi_load(path.c_str(), &w, &h, &channels, STBI_rgb);
+	textureHeight = h; 
+	textureWidth = w; 
+	if (image == nullptr)
+		std::cout << "Failed to load texture!" << std::endl;
+
+	glGenTextures(1, &textureImage);
+	glBindTexture(GL_TEXTURE_2D, textureImage);
+	// 3 channels = RGB ; 4 channel = RGBA
+	if (channels == 3)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	else if (channels == 4)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	// we set how to consider UVs outside [0,1] range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// we set the filtering for minification and magnification
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+
+	// we free the memory once we have created an OpenGL texture
+	stbi_image_free(image);
 
 	return textureImage;
 }

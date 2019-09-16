@@ -19,15 +19,20 @@
 out vec4 colorFrag;
 
 uniform samplerCube tCube;
+uniform sampler2D noise;
+
 uniform float time; 
 //ci sono 4 shader, 0= blinn phong, 1= reflection, 2= fresnel, 3= fresnel con un eta differente
 uniform int current_shader;
 uniform int camMov; 
+uniform int dithering;
 
 uniform vec3 cameraPosition;
 uniform mat4 camera; 
 
 uniform vec2 resolution;
+uniform vec2 noise_resolution;
+
 vec4 fragCoord = gl_FragCoord;
 
 //---------------------------------------------------------------------------------------
@@ -65,6 +70,11 @@ struct RM{
     float travel;
 };
 
+mat2 Rotation(float a) {
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
+}
 //-------------------- Gli operatori
 float SmoothUnion( float d1, float d2, float k ) {
     float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
@@ -143,7 +153,6 @@ Hit df_Torus( vec3 rayPos, vec3 pos, float rad) //radius have 2 radius, the main
 //------------
 
 Hit ShapeDistance(vec3 rayPos, Blob blobs){
-
 	if(blobs.shape == 0)
 		return df_Sphere(rayPos, blobs.position, blobs.size);
 	if(blobs.shape == 1)
@@ -162,7 +171,6 @@ vec3 GetColor(vec3 rayPos){
 }
 
 float GetBorder (vec3 rayPos){
-
 	float border = 0.0;
 	for(int i = 0; i<10; i++)
 		if(ShapeDistance(rayPos, blobs[i]).dist < 0.3 )
@@ -205,15 +213,6 @@ Hit GetDist(vec3 pos)
 			result.dist = SmoothIntersection( shape.dist,result.dist, 0.5);
 		}
 	}
-    //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
-   	//float op = Intersection(sphere0.dist, sphere1.dist);
-    //float op = Subtraction(sphere0.dist, sphere1.dist);
-    //float op = Union(sphere0.dist, sphere1.dist);
-  
-    //--------------LASCIARE NON COMMENTATO UN OPERATORE SOLO
-    //float ops = SmoothIntersection(sphere2.dist, sphere3.dist, 0.2);
-    //float ops = SmoothSubtraction(sphere2.dist, sphere3.dist,0.2);
- 
 	
 	result.color = GetColor(pos); 
 	result.selected = GetBorder(pos); 
@@ -262,13 +261,32 @@ float RampCoeff(float t, float stripes)
 	return coeff; 
 }
 
-float SoftShadow(vec3 surfacePosition, vec3 normal, vec3 lightPosition)
+float SoftShadow( vec3 ro, vec3 rd)
 {
-	vec3 rayDirection = normalize(-vec3(lightPosition - surfacePosition)); 
-
-
-return 0.0;
+	float res = 1.0;
+    float t = 0.1;
+     
+    for( int i=0; i<100; i++ )
+    {
+		float h = RayMarch( ro, rd ).travel;
+        res = min( res, 10.0*h/t );
+        t += h;
+        
+        if( res<0.0001 || t>100 ) break;
+    }
+    return clamp( res, 0.0, 1.0 );
 }
+
+
+
+float dither8x8(vec2 uv, float brightness) {  
+	float limit = texture(noise, uv / noise_resolution[0]).b ;
+	float result; 
+	
+	result = brightness < limit ? 0.0 : 1.0;
+	return result; 
+}
+
 
 vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 {
@@ -345,18 +363,28 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 		finalColor = vec4(diffuseColor + specularColor,1.0); 		
 	}
 
-		float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
-		if (hit < length(surfacePoint-lightPosition))
-		finalColor *= 0.4;
+	//Shadow color
+	/*float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
+	if (hit < length(surfacePoint-lightPosition))*/
+	finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
 
-		if(target.selected==1.0) {
-			float border = dot(toCamera, normal); 
-			if(border > -0.3 && border <0.3)
-				finalColor = vec4(1.0);
-		}
-		
-		
-		return finalColor;
+	//selection shape
+	if(target.selected==1.0) {
+		float border = dot(toCamera, normal); 
+		if(border > -0.3 && border <0.3)
+			finalColor = vec4(1.0);
+	}
+	
+	//dittering
+	if(dithering == 1.0) {
+		float brightness = clamp(dot(normal, light), 0.0, 1.0);
+		float shadowCatch = RayMarch(surfacePoint + normal * 0.11, light).travel;
+		if(shadowCatch < length(lightPosition - surfacePoint)) brightness *= 0.3;
+
+		finalColor = finalColor * dither8x8(gl_FragCoord.xy,brightness);
+	}
+
+	return finalColor;
 }
 
 //----------- BG
@@ -365,7 +393,6 @@ vec3 BackGroundGradient( vec2 uv )
    vec3 color = vec3(0.0);
    if( uv.y >= 1.0 )
        color = mix( TopColor, MiddleColor, uv.y + 1.0 );
-   
    else
        color = mix( MiddleColor, BottomColor, uv.y );
    
@@ -377,7 +404,14 @@ vec3 BackGroundGradient( vec2 uv )
 vec4 Background(vec3 dir) 
 {
 	//BackGroundGradient(uv); 
-   return texture (tCube, dir);
+   vec4 color = texture (tCube, dir);
+   if(dithering == 1.0) {
+	color.x *= dither8x8(gl_FragCoord.xy, color.r); 
+	color.y *= dither8x8(gl_FragCoord.xy, color.g); 
+	color.z *= dither8x8(gl_FragCoord.xy, color.b); 
+   }
+   
+   return vec4(color  ); 
 }
 
 vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
@@ -388,12 +422,6 @@ vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
 	vec3 i = uv.x*r + uv.y*u + value*f;
 	
 	return normalize(i); 
-}
-
-mat2 Rotation(float a) {
-    float s = sin(a);
-    float c = cos(a);
-    return mat2(c, -s, s, c);
 }
 
 //------------------------------------------------------- MAIN
@@ -436,7 +464,7 @@ void main()
 		}
 		else col = Background(ray_direction);
 
-		if(resolution.x == 800)  col = vec4(1.0); 
+	//if(blobs[0].spinning == 1.0)  col = vec4(1.0); 
 
     colorFrag = col;
 }
