@@ -26,6 +26,9 @@ uniform float time;
 uniform int current_shader;
 uniform int camMov; 
 uniform int dithering;
+uniform int plane; 
+uniform int second_pass; 
+
 
 uniform vec3 cameraPosition;
 uniform mat4 camera; 
@@ -186,9 +189,9 @@ Hit GetDist(vec3 pos)
 
     Hit result;
     result.dist = 1e20; 
+	if(plane == 1.0)
+		result = df_plane (pos); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
 
-	Hit planeDist = df_plane (pos); //ipotizzo che esista un piano, la sua distanza è sempre la y della camera rispetto al mondo
-	result = planeDist; 
    //operation 
    Hit shape;
 	for (int i = 0; i < 10; i++){
@@ -280,7 +283,7 @@ float SoftShadow( vec3 ro, vec3 rd)
 
 
 float dither8x8(vec2 uv, float brightness) {  
-	float limit = texture(noise, uv / noise_resolution[0]).b ;
+	float limit = texture(noise, uv / noise_resolution[0]*10).b ;
 	float result; 
 	
 	result = brightness < limit ? 0.0 : 1.0;
@@ -288,19 +291,10 @@ float dither8x8(vec2 uv, float brightness) {
 }
 
 
-vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
-{
-	vec3 lightPosition = vec3 (0,5,0);
-	lightPosition.xz += vec2(sin(time*0.5)*4., cos(time*0.5)*4.);
-	vec3 light = normalize (lightPosition - surfacePoint);
-	vec3 normal = GetNormal(surfacePoint);
-  	vec4 finalColor = vec4(4.,1.,1.,1.0); 
-	vec3 toCamera = normalize(cameraPosition - surfacePoint); 
-		
-	//blinphong
-	if(current_shader == 0){
+//////////////////////////////////////////////////////////////////////////
+vec4 Blinnphong(vec3 normal, vec3 light, vec3 objColor){
 			float diffuse = clamp(dot(normal, light),0.0,1.0); //faccio il clamp in modo da non aver un valore negativo
-			vec3 diffuseColor = diffuse * target.color;
+			vec3 diffuseColor = diffuse * objColor;
 
 			vec3 reflectedLight = normalize(reflect(-light, normal));
 			float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
@@ -308,18 +302,31 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 			specular = min (diffuse, specular);
 			vec3 specularColor = specular * vec3(1.0);
 
-			finalColor = vec4(diffuseColor+specularColor,1.0);
-		}
-	
-	//reflection
-	if(current_shader == 1){
-        vec3 V = normalize(surfacePoint - cameraPosition);
-        vec3 R = reflect(V, normal);
-		finalColor = texture (tCube, R);
-	}
+			return vec4(diffuseColor+specularColor,1.0);		
+}
 
-	//fresnel
-	if(current_shader == 2 || current_shader == 3){
+vec4 Stripes (vec3 normal, vec3 light, vec3 objColor ){
+		float diffuse = clamp(dot(normal, light), 0.0,1.0);
+		diffuse = RampCoeff(diffuse, 4);
+		vec3 diffuseColor = diffuse * objColor;
+
+		vec3 reflectedLight = normalize (reflect(-light, normal));
+		
+		float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0), 10.);
+		specular = RampCoeff(specular, 4);
+		specular = min (diffuse, specular); 
+		vec3 specularColor = specular * vec3(1.0);
+
+		return vec4(diffuseColor + specularColor,1.0); 		
+}
+
+vec4 Reflection(vec3 surfacePoint, vec3 cameraPosition, vec3 normal){
+		vec3 V = normalize(surfacePoint - cameraPosition);
+        vec3 R = reflect(V, normal);
+		return texture (tCube, R);
+}
+
+vec4 Fresnel(vec3 surfacePoint, vec3 cameraPosition, vec3 lightPosition, vec3 normal){
 		vec3 V = normalize (surfacePoint - cameraPosition);
 		vec3 L = normalize (surfacePoint - lightPosition);
 		vec3 H = normalize (L + V); 
@@ -328,12 +335,12 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 
 		//chromaticabb
 
-		float Eta = current_shader == 3 ? 1.00/1.52 : 1.010; //frsnel or bubble
+		float Eta = current_shader == 3 ? 1.00/1.52 : 1.01; //frsnel or bubble
 
 		vec3 refractDir[3];
-		refractDir[0] = refract(V, normal, Eta);
-		refractDir[1] = refract(V, normal, Eta * 0.99);
-		refractDir[2] = refract(V, normal, Eta * 0.99);
+		refractDir[0] = refract(V, normal, Eta *.99 );
+		refractDir[1] = refract(V, normal, Eta *.98 );
+		refractDir[2] = refract(V, normal, Eta *.97 );
 
 		vec4 refractedColor = vec4(0.0); 
 		refractedColor.r = texture(tCube, refractDir[0]).r;
@@ -344,29 +351,46 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 		float F0 = ((1.0-Eta)*(1.0-Eta)) / ((1.0+Eta)*(1.0+Eta));
    		float Ratio = F0 + (1.0-F0) * pow( 1.0 - max(dot(V, H),0.0), 5.0 );
 
-		finalColor = mix(refractedColor, reflectedColor, clamp (Ratio, 0.0,1.0));
-    }
+		return mix(refractedColor, reflectedColor, clamp (Ratio, 0.0,1.0));
+}
+////////////////////////////////////////////////////////////////
 
-	//stripes color
-	if(current_shader == 4) {
-		float diffuse = clamp(dot(normal, light), 0.0,1.0);
-		diffuse = RampCoeff(diffuse, 4);
-		vec3 diffuseColor = diffuse * target.color;
-
-		vec3 reflectedLight = normalize (reflect(-light, normal));
+vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
+{
+	vec3 lightPosition = vec3 (0,5,0);
+	lightPosition.xz += vec2(sin(time*0.5)*4., cos(time*0.5)*4.);
+	vec3 light = normalize (lightPosition - surfacePoint);
+	vec3 normal = GetNormal(surfacePoint);
+  	vec4 finalColor = vec4(4.,1.,1.,1.0); 
+	vec3 toCamera = normalize(cameraPosition - surfacePoint); 
 		
-		float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0), 10.);
-		specular = RampCoeff(specular, 4);
-		specular = min (diffuse, specular); 
-		vec3 specularColor = specular * vec3(1.0);
+	//blinphong
+	if(current_shader == 0)
+			finalColor = Blinnphong(normal, light, target.color);
+	
+	//stripes color
+	if(current_shader == 1) 
+		finalColor = Stripes(normal, light, target.color);	
+	
+	//reflection
+	if(current_shader == 2)
+		finalColor = Reflection(surfacePoint, cameraPosition, normal); 
 
-		finalColor = vec4(diffuseColor + specularColor,1.0); 		
-	}
+	//fresnel
+	if(current_shader == 3 || current_shader == 4)
+		finalColor = Fresnel(surfacePoint, cameraPosition, lightPosition, normal); 
+
+
+	//light Attenuation 
+	float lightDist = length(lightPosition-surfacePoint); 
+	float atten = 1.0 / (1.0 + lightDist * 0.2 + lightDist*lightDist * 0.1);
+	//finalColor *= atten; 
 
 	//Shadow color
 	/*float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
 	if (hit < length(surfacePoint-lightPosition))*/
-	finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
+	if(current_shader != 3 && current_shader != 4 && !target.subject)
+		finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
 
 	//selection shape
 	if(target.selected==1.0) {
@@ -376,17 +400,44 @@ vec4 GetLight(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 	}
 	
 	//dittering
-	if(dithering == 1.0) {
+	if(dithering == 1.0) 	{
 		float brightness = clamp(dot(normal, light), 0.0, 1.0);
 		float shadowCatch = RayMarch(surfacePoint + normal * 0.11, light).travel;
 		if(shadowCatch < length(lightPosition - surfacePoint)) brightness *= 0.3;
-
-		finalColor = finalColor * dither8x8(gl_FragCoord.xy,brightness);
+		
+		finalColor *= dither8x8(gl_FragCoord.xy, brightness); 
 	}
-
 	return finalColor;
 }
 
+vec4 SecondPass(vec3 ray_direction, vec3 surfacePoint, vec3 camera){
+
+	vec3 normal = GetNormal(surfacePoint); 
+	vec3 new_direction = normalize(reflect (ray_direction, normal)); 
+
+	//trovo un nuovo punto 
+	RM refl_hit = RayMarch(surfacePoint+ (normal*PRECISION*2.), new_direction); 
+	vec3 new_surface = surfacePoint + new_direction * refl_hit.travel;
+	
+	vec3 normal_new_surface = GetNormal(new_surface);
+	
+	vec3 lightPosition = vec3 (0,5,0);
+	vec3 light_dir = normalize(lightPosition-new_surface); 
+	float diffuse = clamp(dot(normal_new_surface , light_dir), 0.0, 1.0); 
+	float specular = pow(clamp(dot(reflect(-light_dir, normal), -new_direction), 0.0,1.0),10.0);
+	vec3 col = GetColor(new_surface); 
+
+	col = (col * (diffuse ) + vec3(1.0)*specular*1.5); 
+
+
+	vec4 color = vec4(col, 1.0); 
+	if(dithering == 1.0) 	{
+		float brightness = clamp(dot(normal_new_surface, light_dir), 0.0, 1.0);
+		
+		color *= dither8x8(gl_FragCoord.xy, brightness); 
+	}
+	return color;
+}
 //----------- BG
 vec3 BackGroundGradient( vec2 uv )
 {
@@ -424,6 +475,7 @@ vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
 	return normalize(i); 
 }
 
+
 //------------------------------------------------------- MAIN
 void main()
 {
@@ -459,12 +511,19 @@ void main()
 		if (raymarch.hit.dist < PRECISION)
 		{
     		vec3 point = ray_origin + ray_direction * raymarch.travel;
-
-    		col = GetLight (point, ray_origin, raymarch.hit);
-		}
+			
+    		col = Rendering (point, ray_origin, raymarch.hit);
+			//second pass
+			if(second_pass == 1.0)
+				col += SecondPass(ray_direction, point, cameraPosition)*0.2;
+		}		
 		else col = Background(ray_direction);
 
-	//if(blobs[0].spinning == 1.0)  col = vec4(1.0); 
+		
+	
+	
+
+	//if(current_shader==0)  col = vec4(1.0); 
 
     colorFrag = col;
 }

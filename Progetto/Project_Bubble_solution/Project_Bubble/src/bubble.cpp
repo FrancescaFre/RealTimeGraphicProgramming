@@ -136,6 +136,8 @@ int choosemodel=0;
 bool cameraMovement = false; 
 int rayMarchingShader = 0; 
 bool dithering;
+bool plane; 
+bool second_pass; 
 //-------------------------------------------
 //			MAIN							|========================================================
 //-------------------------------------------
@@ -288,6 +290,11 @@ int main() {
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "current_shader"), rayMarchingShader);
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "camMov"), cameraMovement);
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "dithering"), dithering);
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "plane"), plane);
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "second_pass"), second_pass);
+
+			
+
 
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -304,6 +311,7 @@ int main() {
 				blob = glm::vec4(0.0);
 				info1 = glm::vec4(0.0);
 				info2 = glm::vec3(0.0);
+				glm::mat4 objectMatrix = glm::mat4(0.0);
 				s = false;
 
 				float m = i % 4; 
@@ -406,7 +414,7 @@ int main() {
 		//begin of main gui
 		ImGui::Begin("Main GUI");
 		{
-			if (ImGui::Button("Bubble"))
+			if (ImGui::Button("Models"))
 				current_program = 0;
 			ImGui::SameLine();
 			if (ImGui::Button("RayMarching"))
@@ -414,25 +422,24 @@ int main() {
 
 			//-------------------------
 			if (current_program == 0)
-				ImGui::Text("Bubble");
+				ImGui::Text("Models");
 
 			if (current_program == 1) {
 				ImGui::Text("RayMarching");	
 				if (ImGui::Button("Blin-Phonn"))
 					rayMarchingShader = 0;
 				ImGui::SameLine();
-				if (ImGui::Button("Reflect"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+				if (ImGui::Button("Stripes"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
 					rayMarchingShader = 1;
 				ImGui::SameLine();
-				if (ImGui::Button("Fresnel"))
+				if (ImGui::Button("Reflect"))
 					rayMarchingShader = 2;
 				ImGui::SameLine();
-				if (ImGui::Button("Bubble2"))
+				if (ImGui::Button("Fresnel"))
 					rayMarchingShader = 3;
 				ImGui::SameLine();
-				if (ImGui::Button("Stripes"))
+				if (ImGui::Button("Bubble"))
 					rayMarchingShader = 4;
-				ImGui::SameLine();
 				
 				ImGui::Checkbox("Dithering", &dithering);
 			}
@@ -475,6 +482,9 @@ int main() {
 
 			ImGui::Text(" ");
 			ImGui::Separator;
+			ImGui::Checkbox("Plane", &plane); 
+			ImGui::Checkbox("Second pass", &second_pass);
+				
 			ImGui::Text("%d object, MAX 10	", scene.size());
 			ImGui::SameLine();
 			if (scene.size() < 10) {
@@ -531,6 +541,7 @@ int main() {
 				std::cout << "-------------" << endl;
 
 				PrintCurrentShader(current_program); 
+				cout <<"shader:"<< rayMarchingShader << endl; 
 			}
 		
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
