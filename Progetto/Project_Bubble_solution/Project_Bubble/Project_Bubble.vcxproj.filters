@@ -6,7 +6,7 @@
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_glfw_gl3.cpp" />
-    <ClCompile Include="src\bubble.cpp" />
+    <ClCompile Include="src\Multiple.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\object\firstFragShader.fs" />
@@ -29,6 +29,11 @@
     <None Include="src\shaders\basicMeta.vert" />
     <None Include="src\shaders\rayMarching.frag" />
     <None Include="src\shaders\rayMarching1.frag" />
+    <None Include="src\shaders\RM_Reflection.frag" />
+    <None Include="src\shaders\RM_Blinn.frag" />
+    <None Include="src\shaders\RM_BN.frag" />
+    <None Include="src\shaders\RM_BubbleFresnel.frag" />
+    <None Include="src\shaders\RM_Stripes.frag" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\object\wall.jpg" />

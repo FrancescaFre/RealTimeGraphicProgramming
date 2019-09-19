@@ -125,6 +125,7 @@ struct object_on_scene {
 	bool isMoving = false; 
 	glm::vec3 movement = glm::vec3(0.1f, 1.0f, 1.1f);
 	bool spinning = false; 
+	bool morph = false; 
 	float orientationY = 0.0f;
 	bool wireframe = false;
 	bool metashape = true; 
@@ -138,6 +139,8 @@ int rayMarchingShader = 0;
 bool dithering;
 bool plane; 
 bool second_pass; 
+bool repetition;
+
 //-------------------------------------------
 //			MAIN							|========================================================
 //-------------------------------------------
@@ -292,10 +295,8 @@ int main() {
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "dithering"), dithering);
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "plane"), plane);
 			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "second_pass"), second_pass);
-
+			glUniform1i(glGetUniformLocation(shaders[current_program].Program, "repetition"), repetition);
 			
-
-
 			normalMatrix = glm::inverseTranspose(glm::mat3(view * modelMatrix));
 			glUniformMatrix4fv(glGetUniformLocation(shaders[current_program].Program, "modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 			glUniformMatrix3fv(glGetUniformLocation(shaders[current_program].Program, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
@@ -324,7 +325,7 @@ int main() {
 					//colore + select
 					info1 = glm::vec4(scene[i].color, scene[i].select );
 					//forma + operatore
-					info2 = glm::vec3(scene[i].shape, scene[i].op, scene[i].spinning);
+					info2 = glm::vec3(scene[i].shape, scene[i].op, scene[i].morph);
 				}
 				
 				string nameVar = "blobsPos[" + std::to_string(i)+"]";
@@ -440,25 +441,16 @@ int main() {
 				ImGui::SameLine();
 				if (ImGui::Button("Bubble"))
 					rayMarchingShader = 4;
+				ImGui::SameLine();
+				if (ImGui::Button("BN"))
+					rayMarchingShader = 5;
 				
-				ImGui::Checkbox("Dithering", &dithering);
-			}
 
-			if (ImGui::CollapsingHeader("Background Texture")) {
-				if (ImGui::Button("Park"))
-					textureCube = LoadTextureCube("src/texture/cube/park/");
-				ImGui::SameLine();
-				if (ImGui::Button("Mountain"))
-					textureCube = LoadTextureCube("src/texture/cube/mountain/");
-				ImGui::SameLine();
-				if (ImGui::Button("Uffizi"))
-					textureCube = LoadTextureCube("src/texture/cube/uffizi/");
-				ImGui::SameLine();
-				if (ImGui::Button("Sky"))
-					textureCube = LoadTextureCube("src/texture/cube/skybox/");
-				ImGui::SameLine();
-				if (ImGui::Button("Colored"))
-					textureCube = LoadTextureCube("src/texture/cube/colored/");
+				ImGui::Checkbox("Plane", &plane); ImGui::SameLine();
+				ImGui::Checkbox("Second pass", &second_pass);
+				ImGui::Checkbox("Repetition", &repetition); ImGui::SameLine();
+
+				ImGui::Checkbox("Dithering", &dithering);
 			}
 
 			if (dithering && ImGui::CollapsingHeader("BackGround Noise")) {
@@ -478,12 +470,26 @@ int main() {
 				ImGui::SameLine();
 				if (ImGui::Button("Noise-6"))
 					textureNoise = LoadTexture("src/texture/noise6.jpg");
-				}
+			}
+			if (ImGui::CollapsingHeader("Background Texture")) {
+				if (ImGui::Button("Park"))
+					textureCube = LoadTextureCube("src/texture/cube/park/");
+				ImGui::SameLine();
+				if (ImGui::Button("Mountain"))
+					textureCube = LoadTextureCube("src/texture/cube/mountain/");
+				ImGui::SameLine();
+				if (ImGui::Button("Uffizi"))
+					textureCube = LoadTextureCube("src/texture/cube/uffizi/");
+				ImGui::SameLine();
+				if (ImGui::Button("Sky"))
+					textureCube = LoadTextureCube("src/texture/cube/skybox/");
+				ImGui::SameLine();
+				if (ImGui::Button("Colored"))
+					textureCube = LoadTextureCube("src/texture/cube/colored/");
+			}
 
 			ImGui::Text(" ");
 			ImGui::Separator;
-			ImGui::Checkbox("Plane", &plane); 
-			ImGui::Checkbox("Second pass", &second_pass);
 				
 			ImGui::Text("%d object, MAX 10	", scene.size());
 			ImGui::SameLine();
@@ -532,10 +538,6 @@ int main() {
 			if (cameraMovement == false)
 				camera.Position = glm::vec3(0.0f, 0.0f, 7.0f);
 
-			ImGui::SliderFloat("x", &camera.Position.x, -5.0f, 5.0f);
-			ImGui::SliderFloat("y", &camera.Position.y, -5.0f, 5.0f);
-			ImGui::SliderFloat("z", &camera.Position.z, -5.0f, 5.0f);
-
 			if (ImGui::Button("Print values"))
 			{
 				std::cout << "-------------" << endl;
@@ -553,14 +555,38 @@ int main() {
 		string label;
 		//static ImVec4 color = ImColor(114, 144, 154, 200);
 		glm::vec4 color = glm::vec4(1.0);
+
 		//gui for each object
 		for (int i = 0; i < scene.size(); i++) {
+			
 			label = "Object GUI - " + std::to_string(i);
 			ImGui::Begin(label.c_str());
 
 			ImGui::Text("Shape");
-			ImGui::Combo("Shape", &scene[i].shape, "Sphere\0Cube\0Torus");
-			
+			if (current_program == 0) {
+				ImGui::Combo("Shape", &scene[i].shape, "Cube\0Sphere\0Bunny");
+			}
+
+			if (current_program == 1) {
+				ImGui::Combo("Shape", &scene[i].shape, "Sphere\0Cube\0Torus");
+				ImGui::Text("Color:");
+
+				int misc_flags = (ImGuiColorEditFlags_NoOptions);
+
+				color = glm::vec4(scene[i].color, 1.0);
+				ImGui::ColorEdit3("MyColor##1", (float*)& color, misc_flags);
+				scene[i].color.x = color.x;
+				scene[i].color.y = color.y;
+				scene[i].color.z = color.z;
+
+				ImGui::Combo("Operation", &scene[i].op, "Union\0Subtraction\0Intersection");
+
+				ImGui::Checkbox("Morph", &scene[i].morph);
+
+				ImGui::Checkbox("Select", &scene[i].select);
+			}
+
+			//ImGui::Checkbox("Spinning", &scene[i].spinning);
 
 			ImGui::Checkbox("Moving", &scene[i].isMoving);
 			if (scene[i].isMoving && ImGui::CollapsingHeader("Change movement"))
@@ -570,6 +596,12 @@ int main() {
 				ImGui::SliderFloat("z", &scene[i].movement.z, -5.0f, 5.0f);
 			}
 			if (ImGui::CollapsingHeader("Scale & position")) {
+				if (ImGui::Button("Reset"))
+					scene[i].position = glm::vec3(0.0);
+				ImGui::SameLine();
+				if (ImGui::Button("Random"))
+					scene[i].position = glm::vec3((rand() % 10 - 5), (rand() % 10 - 5), (rand() % 10 - 5)); // xyz between -5 and 5
+
 				ImGui::Text("\nScale");
 				ImGui::SliderFloat("Scale", &scene[i].scale, 0.0f, 5.0f);
 
@@ -579,20 +611,6 @@ int main() {
 				ImGui::SliderFloat("z", &scene[i].position.z, -5.0f, 5.0f);
 			}
 
-			ImGui::Checkbox("Select", &scene[i].select);
-			ImGui::Text("Color:");
-		
-			int misc_flags = (ImGuiColorEditFlags_NoOptions);
-
-			color = glm::vec4(scene[i].color, 1.0); 
-			ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
-			scene[i].color.x = color.x;
-			scene[i].color.y = color.y;
-			scene[i].color.z = color.z;
-
-			ImGui::Combo("Operation", &scene[i].op, "Union\0Subtraction\0Intersection");
-
-			ImGui::Checkbox("Spinning", &scene[i].spinning);
 		
 			if (ImGui::Button("Delete Model"))
 				toRemove.push_back(i);

@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\bubble.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_glfw_gl3.cpp" />
+    <ClCompile Include="src\Multiple.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\object\firstFragShader.fs" />
@@ -45,6 +45,11 @@
     <None Include="src\shaders\rayMarching1.frag" />
     <None Include="src\shaders\reflect.frag" />
     <None Include="src\shaders\reflect.vert" />
+    <None Include="src\shaders\RM_Blinn.frag" />
+    <None Include="src\shaders\RM_BN.frag" />
+    <None Include="src\shaders\RM_BubbleFresnel.frag" />
+    <None Include="src\shaders\RM_Reflection.frag" />
+    <None Include="src\shaders\RM_Stripes.frag" />
     <None Include="src\shaders\skybox.frag" />
     <None Include="src\shaders\skybox.vert" />
   </ItemGroup>

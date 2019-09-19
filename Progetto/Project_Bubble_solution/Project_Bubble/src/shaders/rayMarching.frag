@@ -28,6 +28,7 @@ uniform int camMov;
 uniform int dithering;
 uniform int plane; 
 uniform int second_pass; 
+uniform int repetition; 
 
 
 uniform vec3 cameraPosition;
@@ -41,14 +42,15 @@ vec4 fragCoord = gl_FragCoord;
 //---------------------------------------------------------------------------------------
 //struttura dati che raccoglie le info per una singola bolla
 struct Blob
-{
+{ 
 	float shape;//sphere, cube, tourus
 	vec3 position;
     vec3 color;
     float size;
 	float selected; //bool
 	float operator; //union, substraction, intersection
-	float spinning; 
+	float morph; 
+	float newShape; 
 };
 
 Blob blobs[10];
@@ -113,14 +115,16 @@ Hit df_plane (vec3 rayPos)
 {
 	Hit hit;
 	hit.subject = false; 
-    hit.dist = 2+rayPos.y;
+	//vec4 n = vec4(0., 1., 0., 0.);
+   // hit.dist =  dot(rayPos,n.xyz) + n.w + 0.1*sin(rayPos.z*3.0)*sin(rayPos.x*3.0);
+
+	hit.dist = 2+rayPos.y;
 	return hit;
 }
 
 Hit df_Sphere(vec3 rayPos, vec3 spherePos, float size)
-{
+{	
 	float d = length(rayPos - spherePos) - size;
-
     Hit hit;
     hit.dist = d;
 	hit.subject = true; 
@@ -156,6 +160,13 @@ Hit df_Torus( vec3 rayPos, vec3 pos, float rad) //radius have 2 radius, the main
 //------------
 
 Hit ShapeDistance(vec3 rayPos, Blob blobs){
+	if(repetition == 1.0)
+	{//k deve essere più grande della metà dell'oggetto considerato
+		float k = 10.0; 
+		rayPos.z = mod((rayPos.z),k); 
+		rayPos -=vec3(k * 0.5); 
+	}
+
 	if(blobs.shape == 0)
 		return df_Sphere(rayPos, blobs.position, blobs.size);
 	if(blobs.shape == 1)
@@ -165,7 +176,9 @@ Hit ShapeDistance(vec3 rayPos, Blob blobs){
 }
 
 vec3 GetColor(vec3 rayPos){ 
-	vec3 color = max(0.0, 1.0 -df_plane(rayPos).dist) * vec3(0.0,0.4,0.0)*1.0 ; 
+	vec3 color = vec3(0.0); 
+	if(plane == 1.0) 
+	 color = max(0.0, 1.0 -df_plane(rayPos).dist) * vec3(0.0,0.4,0.0)*1.0 ; 
 	for (int i = 0; i<10; i++)
 		if(blobs[i].operator != 1.0)
 			color += max(0.0 , 1.0 -ShapeDistance(rayPos, blobs[i]).dist) *blobs[i].color*1.0; 
@@ -173,14 +186,30 @@ vec3 GetColor(vec3 rayPos){
 	return color;
 }
 
+Hit ChangeShape(Blob blob, vec3 pos)
+{
+	float f = mod((blob.shape + 1),3);
+	Blob b1 = blob;
+	b1.shape = mod((blob.newShape),3);
+			
+	Hit v1 = ShapeDistance(pos, blob);
+	Hit v2 = ShapeDistance(pos, b1); 
+	Hit hit;
+	hit.dist = mix(v1.dist,v2.dist, sin(time)*.5+.5); 
+
+	return  hit; 
+}
+
 float GetBorder (vec3 rayPos){
 	float border = 0.0;
-	for(int i = 0; i<10; i++)
-		if(ShapeDistance(rayPos, blobs[i]).dist < 0.3 )
+	for(int i = 0; i<10; i++){
+		Hit shape = blobs[i].morph == 0.0 ? ShapeDistance(rayPos, blobs[i]) : ChangeShape(blobs[i], rayPos); 
+		if(shape.dist < 0.3 )
 			border += blobs[i].selected; 
-
+	}
 	return clamp (border, 0.0,1.0); 
 }
+
 
 Hit GetDist(vec3 pos)
 {
@@ -194,25 +223,29 @@ Hit GetDist(vec3 pos)
 
    //operation 
    Hit shape;
+	
+	//Union
 	for (int i = 0; i < 10; i++){
 		if(blobs[i].operator == 0){
-			shape = ShapeDistance(pos, blobs[i]);
+			shape = blobs[i].morph == 0.0 ? ShapeDistance(pos, blobs[i]) : ChangeShape(blobs[i], pos); 
 			result.dist = SmoothUnion(result.dist, shape.dist, 0.5);
 		}
 	}
 
+	//Subtraction
 	for (int i = 0; i<10; i++)
 	{
 		if(blobs[i].operator == 1){
-			shape = ShapeDistance(pos, blobs[i]);
+			shape = blobs[i].morph == 0.0 ? ShapeDistance(pos, blobs[i]) : ChangeShape(blobs[i], pos); 
 			result.dist = SmoothSubtraction( shape.dist,result.dist, 0.5);
 		}
 	}
 
+	//Intersection
 	for (int i = 0; i<10; i++)
 	{
 		if(blobs[i].operator == 2){
-			shape = ShapeDistance(pos, blobs[i]);
+			shape = blobs[i].morph == 0.0 ? ShapeDistance(pos, blobs[i]) : ChangeShape(blobs[i], pos);
 			result.dist = SmoothIntersection( shape.dist,result.dist, 0.5);
 		}
 	}
@@ -272,7 +305,7 @@ float SoftShadow( vec3 ro, vec3 rd)
     for( int i=0; i<100; i++ )
     {
 		float h = RayMarch( ro, rd ).travel;
-        res = min( res, 10.0*h/t );
+        res = min( res, 5.0*h/t );
         t += h;
         
         if( res<0.0001 || t>100 ) break;
@@ -380,17 +413,13 @@ vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 	if(current_shader == 3 || current_shader == 4)
 		finalColor = Fresnel(surfacePoint, cameraPosition, lightPosition, normal); 
 
-
-	//light Attenuation 
-	float lightDist = length(lightPosition-surfacePoint); 
-	float atten = 1.0 / (1.0 + lightDist * 0.2 + lightDist*lightDist * 0.1);
-	//finalColor *= atten; 
-
+	float shadowHit; 
 	//Shadow color
-	/*float hit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
-	if (hit < length(surfacePoint-lightPosition))*/
-	if(current_shader != 3 && current_shader != 4 && !target.subject)
-		finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
+	if(current_shader != 3 && current_shader != 4 && !target.subject){
+		shadowHit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
+		if (shadowHit < length(surfacePoint-lightPosition)) finalColor *= 0.4;
+		//finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
+	}
 
 	//selection shape
 	if(target.selected==1.0) {
@@ -402,11 +431,11 @@ vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 	//dittering
 	if(dithering == 1.0) 	{
 		float brightness = clamp(dot(normal, light), 0.0, 1.0);
-		float shadowCatch = RayMarch(surfacePoint + normal * 0.11, light).travel;
-		if(shadowCatch < length(lightPosition - surfacePoint)) brightness *= 0.3;
+		if(shadowHit < length(lightPosition - surfacePoint)) brightness *= 0.3;
 		
 		finalColor *= dither8x8(gl_FragCoord.xy, brightness); 
 	}
+
 	return finalColor;
 }
 
@@ -475,7 +504,6 @@ vec3 getDirection(vec2 uv, vec3 position, vec3 dest, float value){
 	return normalize(i); 
 }
 
-
 //------------------------------------------------------- MAIN
 void main()
 {
@@ -494,8 +522,9 @@ void main()
 		blobs[i].color = info1[i].xyz;
 		blobs[i].selected = info1[i].w;
 		blobs[i].shape = info2[i].x;
+		blobs[i].newShape = mod((blobs[i].shape+1),3);
 		blobs[i].operator = info2[i].y;
-		blobs[i].spinning = info2[i].z;
+		blobs[i].morph = info2[i].z;
     }
 
 	vec3 ray_origin = vec3(0.0,1.0,-30.0);
@@ -508,22 +537,22 @@ void main()
 	
 	RM raymarch = RayMarch(ray_origin, ray_direction);
 
-		if (raymarch.hit.dist < PRECISION)
-		{
-    		vec3 point = ray_origin + ray_direction * raymarch.travel;
-			
-    		col = Rendering (point, ray_origin, raymarch.hit);
-			//second pass
-			if(second_pass == 1.0)
-				col += SecondPass(ray_direction, point, cameraPosition)*0.2;
-		}		
-		else col = Background(ray_direction);
+	
+	col = vec4(vec3(raymarch.travel/35.), 1.0);
 
+	if (raymarch.hit.dist < PRECISION)
+	{
+    	vec3 point = ray_origin + ray_direction * raymarch.travel;
+			
+    	col = Rendering (point, ray_origin, raymarch.hit);
+		//second pass
+		if(second_pass == 1.0)
+			col += SecondPass(ray_direction, point, cameraPosition)*0.2;
+	}		
+	else col = Background(ray_direction);
+	
+		//if( >0.0)  col = vec4(1.0); 
 		
 	
-	
-
-	//if(current_shader==0)  col = vec4(1.0); 
-
     colorFrag = col;
 }
