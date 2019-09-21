@@ -140,6 +140,7 @@ bool dithering;
 bool plane;
 bool second_pass;
 bool repetition;
+bool stop; 
 
 //-------------------------------------------
 //			MAIN							|========================================================
@@ -155,7 +156,7 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Project - 921900", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Project - 921900 - Multi", nullptr, nullptr);
 	if (!window)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -193,7 +194,7 @@ int main() {
 	//Load skybox and skybox's shader
 	Shader skybox_shader("src/shaders/skybox.vert", "src/shaders/skybox.frag");
 	textureCube = LoadTextureCube("src/texture/cube/skybox/");
-	textureNoise = LoadTexture("src/texture/noise1.jpg");
+	textureNoise = LoadTexture("src/texture/noise4.jpg");
 	// LOAD MODELs
 	Model cubeModel("src/models/cube.obj");
 	Model sphereModel("src/models/sphere.obj");
@@ -272,8 +273,8 @@ int main() {
 		glBindTexture(GL_TEXTURE_2D, textureNoise);
 		glUniform1i(glGetUniformLocation(shaders[current_program].Program, "noise"), 1);
 
-		//if (current_program == BUBBLE)
-			//glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"), mFresnelPower);
+		if (current_program == MODELS)
+			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "mFresnelPower"), mFresnelPower);
 
 		if (current_program != MODELS) {
 			glUniform1f(glGetUniformLocation(shaders[current_program].Program, "time"), currentFrame);
@@ -459,7 +460,7 @@ int main() {
 
 			if (dithering && ImGui::CollapsingHeader("Dithering Noise")) {
 				if (ImGui::Button("Noise-1"))
-					textureNoise = LoadTexture("src/texture/noise5.jpg");
+					textureNoise = LoadTexture("src/texture/noise1.jpg");
 				ImGui::SameLine();
 				if (ImGui::Button("Noise-2"))
 					textureNoise = LoadTexture("src/texture/noise2.jpg");
@@ -470,7 +471,7 @@ int main() {
 					textureNoise = LoadTexture("src/texture/noise4.jpg");
 				ImGui::SameLine();
 				if (ImGui::Button("Noise-5"))
-					textureNoise = LoadTexture("src/texture/noise1.jpg");
+					textureNoise = LoadTexture("src/texture/noise5.jpg");
 				ImGui::SameLine();
 				if (ImGui::Button("Noise-6"))
 					textureNoise = LoadTexture("src/texture/noise6.jpg");
@@ -541,7 +542,7 @@ int main() {
 			ImGui::Checkbox("Move camera", &cameraMovement);
 			if (cameraMovement == false)
 				camera.Position = glm::vec3(0.0f, 0.0f, 7.0f);
-
+			
 			if (ImGui::Button("Print values"))
 			{
 				std::cout << "-------------" << endl;

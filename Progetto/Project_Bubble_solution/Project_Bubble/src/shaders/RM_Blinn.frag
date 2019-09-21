@@ -318,17 +318,22 @@ float dither8x8(vec2 uv, float brightness) {
 
 
 //////////////////////////////////////////////////////////////////////////
-vec4 Blinnphong(vec3 normal, vec3 light, vec3 objColor){
+vec4 Blinnphong(vec3 normal, vec3 light, vec3 objColor, bool shadow){
 			float diffuse = clamp(dot(normal, light),0.0,1.0); //faccio il clamp in modo da non aver un valore negativo
 			vec3 diffuseColor = diffuse * objColor;
+			float specular = diffuse;
+			vec3 specularColor = diffuseColor; 
 
-			vec3 reflectedLight = normalize(reflect(-light, normal));
-			float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
+			if(!shadow)	
+			{
+				vec3 reflectedLight = normalize(reflect(-light, normal));
+				specular= pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
+				specular = min (diffuse, specular);
 
-			specular = min (diffuse, specular);
-			vec3 specularColor = specular * vec3(1.0);
-
-			return vec4(diffuseColor+specularColor,1.0);		
+				specularColor = specular * vec3(1.0);
+			    return vec4(diffuseColor+specularColor,1.0);
+			}
+			return vec4(diffuseColor,1.0);	
 }
 ////////////////////////////////////////////////////////////////
 
@@ -341,15 +346,17 @@ vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
 	vec3 toCamera = normalize(cameraPosition - surfacePoint); 
 	
-	finalColor = Blinnphong(normal, light, target.color);
-
 	float shadowHit; 
+	bool shadow;
 	//Shadow color
 	if(current_shader != 3 && current_shader != 4 && !target.subject){
 		shadowHit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
-		if (shadowHit < length(surfacePoint-lightPosition)) finalColor *= 0.4;
+		 shadow = shadowHit < length(surfacePoint-lightPosition);
 		//finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
 	}
+
+	finalColor = Blinnphong(normal, light, target.color, shadow);
+	if(shadow) finalColor*=0.4;
 
 	//selection shape
 	if(target.selected==1.0) {

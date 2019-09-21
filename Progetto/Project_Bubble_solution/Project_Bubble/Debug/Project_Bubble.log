@@ -1,24 +1,3 @@
-﻿  Multiple.cpp
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(98,25): warning C4305:  'initializing': truncation from 'double' to 'GLfloat'
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(232,24): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(318,13): warning C4244:  'initializing': conversion from 'int' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(319,11): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(347,22): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(496,11): warning C4551:  function call missing argument list
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(507,17): warning C4244:  'initializing': conversion from 'unsigned int' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(512,21): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(513,21): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(514,21): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(518,21): warning C4244:  '=': conversion from 'int' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(520,14): warning C4244:  'initializing': conversion from 'double' to 'float', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(564,21): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(624,21): warning C4018:  '<': signed/unsigned mismatch
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(557,7): warning C4101:  'choose': unreferenced local variable
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(845,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(846,11): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(851,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(852,18): warning C4244:  'initializing': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(855,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(856,10): warning C4244:  '=': conversion from 'double' to 'GLfloat', possible loss of data
-D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Project_Bubble\src\Multiple.cpp(864,14): warning C4244:  'initializing': conversion from 'double' to 'float', possible loss of data
+﻿     Creating library D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.lib and object D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.exp
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   Project_Bubble.vcxproj -> D:\Francesca\Desktop\Universita\RTGP\Lab\RealTimeGraphicProgramming\Progetto\Project_Bubble_solution\Debug\Project_Bubble.exe

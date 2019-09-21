@@ -155,7 +155,7 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 		
-	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Project - 921900", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Project - 921900 - Original", nullptr, nullptr);
 	if (!window)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;

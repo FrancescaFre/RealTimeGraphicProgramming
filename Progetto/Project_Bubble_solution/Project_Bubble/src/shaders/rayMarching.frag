@@ -136,7 +136,7 @@ Hit df_Box(vec3 rayPos, vec3 pos, float s )
   pos = rayPos - pos; 
   vec3 size = vec3(s); 
   vec3 d = abs(pos) - size;
-  float dist = length(max(d,0.0))
+  float dist = length(max(d,0.0));
          + min(max(d.x,max(d.y,d.z)),0.0); // remove this line for an only partially signed sdf 
 
   Hit hit; 
@@ -325,32 +325,39 @@ float dither8x8(vec2 uv, float brightness) {
 
 
 //////////////////////////////////////////////////////////////////////////
-vec4 Blinnphong(vec3 normal, vec3 light, vec3 objColor){
+vec4 Blinnphong(vec3 normal, vec3 light, vec3 objColor, bool shadow){
 			float diffuse = clamp(dot(normal, light),0.0,1.0); //faccio il clamp in modo da non aver un valore negativo
 			vec3 diffuseColor = diffuse * objColor;
+			float specular = diffuse;
+			vec3 specularColor = diffuseColor; 
 
-			vec3 reflectedLight = normalize(reflect(-light, normal));
-			float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
+			if(!shadow)	
+			{
+				vec3 reflectedLight = normalize(reflect(-light, normal));
+				specular= pow(clamp(dot(reflectedLight, light), 0.0,1.0),10.0);
+				specular = min (diffuse, specular);
 
-			specular = min (diffuse, specular);
-			vec3 specularColor = specular * vec3(1.0);
-
-			return vec4(diffuseColor+specularColor,1.0);		
+				specularColor = specular * vec3(1.0);
+			    return vec4(diffuseColor+specularColor,1.0);
+			}
+			return vec4(diffuseColor,1.0);	
 }
 
-vec4 Stripes (vec3 normal, vec3 light, vec3 objColor ){
+vec4 Stripes (vec3 normal, vec3 light, vec3 objColor, bool shadow ){
 		float diffuse = clamp(dot(normal, light), 0.0,1.0);
 		diffuse = RampCoeff(diffuse, 4);
 		vec3 diffuseColor = diffuse * objColor;
-
-		vec3 reflectedLight = normalize (reflect(-light, normal));
+			if(!shadow){
+			vec3 reflectedLight = normalize (reflect(-light, normal));
 		
-		float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0), 10.);
-		specular = RampCoeff(specular, 4);
-		specular = min (diffuse, specular); 
-		vec3 specularColor = specular * vec3(1.0);
+			float specular = pow(clamp(dot(reflectedLight, light), 0.0,1.0), 10.);
+			specular = RampCoeff(specular, 4);
+			specular = min (diffuse, specular); 
+			vec3 specularColor = specular * vec3(1.0);
 
-		return vec4(diffuseColor + specularColor,1.0); 		
+			return vec4(diffuseColor + specularColor,1.0); 		
+		}
+		return vec4(diffuseColor,1.0); 		
 }
 
 vec4 Reflection(vec3 surfacePoint, vec3 cameraPosition, vec3 normal){
@@ -397,13 +404,22 @@ vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
   	vec4 finalColor = vec4(4.,1.,1.,1.0); 
 	vec3 toCamera = normalize(cameraPosition - surfacePoint); 
 		
+	float shadowHit; 
+	bool shadow;
+	//Shadow color
+	if(current_shader != 3 && current_shader != 4 && !target.subject){
+		shadowHit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
+		 shadow = shadowHit < length(surfacePoint-lightPosition);
+		//finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
+	}
+
 	//blinphong
 	if(current_shader == 0)
-			finalColor = Blinnphong(normal, light, target.color);
+			finalColor = Blinnphong(normal, light, target.color, shadow);
 	
 	//stripes color
 	if(current_shader == 1) 
-		finalColor = Stripes(normal, light, target.color);	
+		finalColor = Stripes(normal, light, target.color, shadow);	
 	
 	//reflection
 	if(current_shader == 2)
@@ -413,13 +429,8 @@ vec4 Rendering(vec3 surfacePoint, vec3 cameraPosition, Hit target)
 	if(current_shader == 3 || current_shader == 4)
 		finalColor = Fresnel(surfacePoint, cameraPosition, lightPosition, normal); 
 
-	float shadowHit; 
-	//Shadow color
-	if(current_shader != 3 && current_shader != 4 && !target.subject){
-		shadowHit = RayMarch(surfacePoint + (normal*PRECISION*2.), light).travel;
-		if (shadowHit < length(surfacePoint-lightPosition)) finalColor *= 0.4;
-		//finalColor *= SoftShadow(surfacePoint + (normal*PRECISION*2.), light);
-	}
+	if(shadow)
+		finalColor*=0.4;
 
 	//selection shape
 	if(target.selected==1.0) {
@@ -539,18 +550,18 @@ void main()
 
 	
 	col = vec4(vec3(raymarch.travel/35.), 1.0);
-
-	if (raymarch.hit.dist < PRECISION)
-	{
-    	vec3 point = ray_origin + ray_direction * raymarch.travel;
+	if(current_shader != 5){
+		if (raymarch.hit.dist < PRECISION)
+		{
+    		vec3 point = ray_origin + ray_direction * raymarch.travel;
 			
-    	col = Rendering (point, ray_origin, raymarch.hit);
-		//second pass
-		if(second_pass == 1.0)
-			col += SecondPass(ray_direction, point, cameraPosition)*0.2;
-	}		
-	else col = Background(ray_direction);
-	
+    		col = Rendering (point, ray_origin, raymarch.hit);
+			//second pass
+			if(second_pass == 1.0)
+				col += SecondPass(ray_direction, point, cameraPosition)*0.2;
+		}		
+		else col = Background(ray_direction);
+	}
 		//if( >0.0)  col = vec4(1.0); 
 		
 	
