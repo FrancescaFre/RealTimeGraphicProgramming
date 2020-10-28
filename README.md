@@ -387,23 +387,23 @@ same amount and type of object in the scene, with the same movement, and positio
 
 ## Results 
 |Multi | BN| Blinn-Phong | Stripes | Reflect | Fresnel |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|
-800x600 | 144 |75| 62| 90| 97|
-Plane |39| 20| 14| 20| 24|
-SecondPass| 142| 66| 57| 82| 83|
-1920x1080 |50| 26| 20| 30| 30|
-Plane| 11 |6 |4 |6| 6|
-SecondPass| 47| 24| 19| 27| 28|
+|---|:-:|:-:|:-:|:-:|:-:|
+|800x600 | 144 |75| 62| 90| 97|
+|Plane |39| 20| 14| 20| 24|
+|SecondPass| 142| 66| 57| 82| 83|
+|1920x1080 |50| 26| 20| 30| 30|
+|Plane| 11 |6 |4 |6| 6|
+|SecondPass| 47| 24| 19| 27| 28|
 
 
 |Original| BN| Blinn-Phong| Stripes| Reflect| Fresnel|
-|---|:-:|:-:|:-:|:-:|:-:|:-:|
-800x600| 68| 65| 64| 62| 64|
-Plane| 16| 14| 14| 14| 16|
-SecondPass| 68| 58| 57| 58| 60
-1920x1080| 20.5| 20| 19.8| 19.7| 20|
-Plane| 4.4| 3.8| 3.8| 3.8| 4.0|
-SecondPass| 20.5| 18.7| 18.7| 18.5| 19|
+|---|:-:|:-:|:-:|:-:|:-:|
+|800x600| 68| 65| 64| 62| 64|
+|Plane| 16| 14| 14| 14| 16|
+|SecondPass| 68| 58| 57| 58| 60
+|1920x1080| 20.5| 20| 19.8| 19.7| 20|
+|Plane| 4.4| 3.8| 3.8| 3.8| 4.0|
+|SecondPass| 20.5| 18.7| 18.7| 18.5| 19|
 
 The difference between the two solutions is clear. 
 I presume that the compiler sees the different
