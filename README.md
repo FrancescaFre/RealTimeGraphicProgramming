@@ -15,6 +15,7 @@ in the scene space, and are implicitly identified
 Firstly iI define the starting position of the ray, which can be different from the
 origin of the world [0,0,0]. Then I set the direction to follow, which is given by
 the pixel on screen that are obtained by normalizing the screen coordinates.
+
 ![Ray definition](src/raydef.png)
 ```glsl
 vec2 uv = gl_FragCoord.xy/resolution.xy;
@@ -30,6 +31,7 @@ Lastly, to obtain the correct pixel dimension we have to multiply the X coordina
 the window. Since (0.5, 0.5) is the center of a (0, 0) (1, 1) screen, to find the center of a 800x600
 window I have to multiply the X coordinate by 800/600, the ratio of the window, to find the center in
 the new resolution.
+
 ![Coords](src/coords.png)
 
 ### Implementation
@@ -70,7 +72,7 @@ In the end, the travel value is returned.
 
 ## Boundaries:
 
-### PRECISION: An higher value mean a very high imprecision of the shape. A small value means more
+PRECISION: An higher value mean a very high imprecision of the shape. A small value means more
 precision, but it requires an higher computational effort
 
 |  precision = 0.5 | precision = 0.01   |
@@ -100,6 +102,7 @@ The implemented primitives are sphere, cube and torus.
 
 ### Plane:
 The minimum distance from a plane is detected by the Y component of the ray.
+
 ![plane](src/plane.png) 
 ```glsl
 Hit df_plane (vec3 rayPos)
@@ -109,6 +112,7 @@ Hit df_plane (vec3 rayPos)
 ### Sphere:
 The minimum distance to represent a sphere is calculated by getting the distance between the
 endpoint of the ray (blue point) and the center of the sphere, and subtracting the radius to it.
+
 ![sphere](src/sphere.png) 
 ```glsl
 float df_Sphere(vec3 rayPos, vec3 spherePos, float size)
@@ -152,12 +156,14 @@ return dist;
 ```
 ## Operators
 ### Union
+
 ![union](src/union1.png) 
 ```glsl
 float opUnion( float d1, float d2 )
 { min(d1,d2); }
 ```
 ## Subtraction
+
 ![sub](src/subtract.png) 
 ```glsl
 float opSubtraction( float d1, float d2 )
@@ -173,6 +179,7 @@ float opSubtraction( float d1, float d2 )
 
 
 ### Intersection
+
 ![intersect](src/intersect.png) 
 ```glsl
 float opIntersection( float d1, float d2 )
@@ -221,6 +228,7 @@ It is an operation where the position of the ray is altered with the
 mod operator. K is the value of repetition: with a good K, we have
 to consider that K to be greater than the doubled size of the
 object.
+
 ![sunion](src/repet.png)
 ```glsl
 float k = 10.0;
@@ -231,6 +239,7 @@ rayPos -=vec3(k * 0.5);
 
 # Rendering
 ## BN
+
 ![bn](src/bn.png)
 
 The color is given by the distance of the object from the ray origin.
@@ -258,6 +267,7 @@ the surface.
 `fragColor = diffusive * color + specular * color`
 
 ## Stripes
+
 ![stripe](src/stripes.png)
 
 Like the Blinn-Phong technique but the color is altered using
@@ -273,6 +283,7 @@ of stripes.
 `fragColor = RampCoeff(diffusive, 4)*color+RampCoeff(specular,4)*color`
 
 ## Reflection
+
 ![ref](src/reflection.png)
 Given a **surface point**, the **position of the camera**, the
 **normal** and a **cube map**, to obtain the reflection over the
@@ -284,9 +295,9 @@ Then with the texture function with the cube map and the reflection I obtain the
 `fragColor = texture(cubeMap, reflect)`
 
 ## Fresnel
-|   |   |
-|---|---|
+
 |![ref](src/fresnel.png) |![ref](src/bubble.png)|
+|---|---|
 
 We have to calculate some values, like reflected and refracted
 values.
